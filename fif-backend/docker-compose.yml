@@ -1,0 +1,60 @@
+version: '3.8'
+
+volumes:
+  pg_data:
+  redis_data:
+  minio_data:
+
+services:
+  # 1. Base de Datos: PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    container_name: fif_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: fif_admin
+      POSTGRES_PASSWORD: fif_secret_password_2026
+      POSTGRES_DB: fif_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # 2. Redis (Caché y eventos)
+  redis:
+    image: redis:7-alpine
+    container_name: fif_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  # 3. MinIO (S3 local compatible para desarrollo on-premise)
+  minio:
+    image: minio/minio:latest
+    container_name: fif_minio
+    restart: always
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio_admin
+      MINIO_ROOT_PASSWORD: minio_secret_key_2026
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  # 4. Nginx (Reverse Proxy)
+  nginx:
+    image: nginx:alpine
+    container_name: fif_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - postgres
+      - redis
+      - minio
