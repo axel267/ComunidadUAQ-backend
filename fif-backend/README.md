@@ -42,7 +42,35 @@ Cuando ejecutas `docker compose up -d`, se levantan los siguientes servicios:
 * **MinIO (Consola Web):** Puerto `9001` (Usuario: `minio_admin`)
 * **Nginx:** Puerto `80` (Redirige las peticiones `/api/` a la aplicación NestJS en el puerto `4000`)
 
-*(Nota: Asegúrate de configurar las variables de entorno correspondientes en tu archivo `.env` de NestJS para conectarte a estos servicios).*
+## ⚙️ Variables de Entorno
+
+Debes crear un archivo `.env` en la raíz del backend (`fif-backend/`) con las siguientes variables para que se conecte correctamente a los servicios levantados por Docker:
+
+```env
+PORT=4000
+
+# PostgreSQL 16
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=fif_admin
+DB_PASSWORD=fif_secret_password_2026
+DB_NAME=fif_db
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# AWS S3 / MinIO local
+AWS_REGION=us-east-1
+AWS_ACCESS_KEY_ID=minio_admin
+AWS_SECRET_ACCESS_KEY=minio_secret_key_2026
+AWS_S3_BUCKET_NAME=fif-media
+AWS_S3_ENDPOINT=http://localhost:9000
+AWS_S3_FORCE_PATH_STYLE=true
+
+# Google Gemini API
+GEMINI_API_KEY=tu_api_key_de_google_ai_studio
+```
 
 ## 🧪 Pruebas
 
