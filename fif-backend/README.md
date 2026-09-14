@@ -72,7 +72,7 @@ AWS_S3_FORCE_PATH_STYLE=true
 GEMINI_API_KEY=tu_api_key_de_google_ai_studio
 ```
 
-## 🧪 Pruebas
+##  Pruebas
 
 ```bash
 # unit tests
@@ -84,3 +84,10 @@ npm run test:e2e
 # test coverage
 npm run test:cov
 ```
+#Bases de datos
+Se puedo usar un cliente de base de datos como DBaver, DataGrip, pgAdmin en los cuales se deben de configurar las siguiente cosas para poder ver las bd
+Host: localhost (o 127.0.0.1)
+Puerto: 5434
+Base de datos: fif_db
+Usuario: fif_admin
+Contraseña: fif_secret_password_2026
