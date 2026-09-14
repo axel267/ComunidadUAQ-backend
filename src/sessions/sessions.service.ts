@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -27,5 +27,46 @@ export class SessionsService {
     }
 
     throw new UnauthorizedException('Credenciales inválidas');
+  }
+
+  async createAccount(expediente: number, email: string, pass: string, nombre: string, facultadId: number, rolId: number) {
+    try {
+      // Verificar si el usuario ya existe (por correo o expediente)
+      const existingUser = await this.usersRepository.findOne({ 
+        where: [{ email }, { expediente }] 
+      });
+      
+      if (existingUser) {
+        throw new BadRequestException('El correo o expediente ya están registrados');
+      }
+
+      // Crear la nueva entidad de usuario
+      const newUser = this.usersRepository.create({
+        expediente,
+        email,
+        pass, // Recuerda encriptar esto con bcrypt en el futuro
+        nombre,
+        facultadId,
+        rolId,
+        estadoActivo: true
+      });
+
+      // Guardar en la base de datos
+      await this.usersRepository.save(newUser);
+
+      return {
+        message: 'Cuenta creada exitosamente',
+        user: {
+          id: newUser.id,
+          email: newUser.email,
+          nombre: newUser.nombre,
+          expediente: newUser.expediente
+        }
+      };
+    } catch (error) {
+      // Retornar el mensaje exacto del error para saber qué falló
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new BadRequestException(`Fallo al crear la cuenta: ${errorMessage}`);
+    }
   }
 }
