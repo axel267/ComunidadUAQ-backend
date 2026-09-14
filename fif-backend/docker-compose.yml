@@ -16,9 +16,10 @@ services:
       POSTGRES_PASSWORD: fif_secret_password_2026
       POSTGRES_DB: fif_db
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   # 2. Redis (Caché y eventos)
   redis:
