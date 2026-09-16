@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import { Facultade } from '../facultades/entities/facultade.entity';
 
 @Entity('usuarios')
 export class User {
@@ -17,8 +18,13 @@ export class User {
     @Column({ name: 'contrasena' })
     pass: string;
 
-    @Column({ name: 'facultad_id', type: 'int', nullable: true })
-    facultadId: number;
+    @ManyToMany(() => Facultade)
+    @JoinTable({
+        name: 'usuarios_facultades',
+        joinColumn: { name: 'usuario_id', referencedColumnName: 'id' },
+        inverseJoinColumn: { name: 'facultad_id', referencedColumnName: 'id' }
+    })
+    facultades: Facultade[];
 
     @Column({ name: 'rol_id', type: 'int', nullable: true })
     rolId: number;

@@ -29,7 +29,7 @@ export class SessionsService {
     throw new UnauthorizedException('Credenciales inválidas');
   }
 
-  async createAccount(expediente: number, email: string, pass: string, nombre: string, facultadId: number, rolId: number) {
+  async createAccount(expediente: number, email: string, pass: string, nombre: string, facultadesIds: number[], rolId: number) {
     try {
       // Verificar si el usuario ya existe (por correo o expediente)
       const existingUser = await this.usersRepository.findOne({ 
@@ -46,7 +46,7 @@ export class SessionsService {
         email,
         pass, // Recuerda encriptar esto con bcrypt en el futuro
         nombre,
-        facultadId,
+        facultades: facultadesIds.map(id => ({ id })),
         rolId,
         estadoActivo: true
       });
@@ -63,7 +63,12 @@ export class SessionsService {
           expediente: newUser.expediente
         }
       };
-    } catch (error) {
+    } catch (error: any) {
+      // Manejar error de llave foránea (facultad o rol que no existe)
+      if (error.code === '23503' || (error.message && error.message.includes('violates foreign key constraint'))) {
+        throw new BadRequestException('Una o más de las facultades seleccionadas (o el rol) no existen en el sistema.');
+      }
+
       // Retornar el mensaje exacto del error para saber qué falló
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new BadRequestException(`Fallo al crear la cuenta: ${errorMessage}`);

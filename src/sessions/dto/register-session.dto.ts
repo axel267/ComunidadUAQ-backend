@@ -14,8 +14,8 @@ export class RegisterSessionDto {
   @IsString()
   nombre: string;
 
-  @IsInt()
-  facultadId: number;
+  @IsInt({ each: true })
+  facultadesIds: number[];
 
   @IsInt()
   rolId: number;

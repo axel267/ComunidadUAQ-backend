@@ -19,7 +19,7 @@ export class SessionsController {
       body.email, 
       body.pass, 
       body.nombre, 
-      body.facultadId, 
+      body.facultadesIds, 
       body.rolId
     );
   }

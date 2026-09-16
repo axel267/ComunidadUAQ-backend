@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SessionsModule } from './sessions/sessions.module';
+import { FacultadesModule } from './facultades/facultades.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { SessionsModule } from './sessions/sessions.module';
       }),
     }),
     SessionsModule,
+    FacultadesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
