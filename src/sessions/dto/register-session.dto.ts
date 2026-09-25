@@ -1,4 +1,4 @@
-import { IsEmail, IsInt, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsInt, IsString } from 'class-validator';
 
 export class RegisterSessionDto {
   @IsInt()
@@ -6,10 +6,6 @@ export class RegisterSessionDto {
 
   @IsEmail()
   email: string;
-
-  @IsString()
-  @MinLength(6)
-  pass: string;
 
   @IsString()
   nombre: string;
