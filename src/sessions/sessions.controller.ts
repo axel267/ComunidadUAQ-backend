@@ -1,4 +1,4 @@
-import { Controller, Post, Patch, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Patch } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { RegisterSessionDto } from './dto/register-session.dto';
@@ -6,7 +6,7 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 
 @Controller('sessions')
 export class SessionsController {
-  constructor(private readonly sessionsService: SessionsService) {}
+  constructor(private readonly sessionsService: SessionsService) { }
 
   /** POST /sessions — Iniciar sesión */
   @Post()
@@ -38,5 +38,20 @@ export class SessionsController {
       body.currentPassword,
       body.newPassword,
     );
+  }
+
+  @Post('forgot-password')
+  forgotPassword(@Body('email') email: string) {
+    return this.sessionsService.forgotPassword(email);
+  }
+
+  @Get('verify-reset-token')
+  verifyResetToken(@Query('token') token: string) {
+    return this.sessionsService.verifyResetToken(token);
+  }
+
+  @Post('reset-password')
+  resetPassword(@Body('token') token: string, @Body('newPass') newPass: string) {
+    return this.sessionsService.resetPassword(token, newPass);
   }
 }
