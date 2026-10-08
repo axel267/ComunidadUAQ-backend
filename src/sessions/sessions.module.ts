@@ -13,6 +13,7 @@ import { MailModule } from '../mail/mail.module';
       secret: 'super-secreto-universidad-uaq', // En producción esto debería ir en un archivo .env
       signOptions: { expiresIn: '15m' }, // El token expira en 15 minutos
     }),
+    MailModule,
   ],
   controllers: [SessionsController],
   providers: [SessionsService],

@@ -40,14 +40,14 @@ Cuando ejecutas `docker compose up -d`, se levantan los siguientes servicios:
 * **Redis:** Puerto `6379`
 * **MinIO (API):** Puerto `9000`
 * **MinIO (Consola Web):** Puerto `9001` (Usuario: `minio_admin`)
-* **Nginx:** Puerto `80` (Redirige las peticiones `/api/` a la aplicación NestJS en el puerto `4000`)
+* **Nginx:** Puerto `80` (Redirige las peticiones `/api/` a la aplicación NestJS en el puerto `8000`)
 
 ## ⚙️ Variables de Entorno
 
 Debes crear un archivo `.env` en la raíz del backend (`fif-backend/`) con las siguientes variables para que se conecte correctamente a los servicios levantados por Docker:
 
 ```env
-PORT=4000
+PORT=8000
 
 # PostgreSQL 16
 DB_HOST=localhost
