@@ -6,6 +6,8 @@ import { AppService } from './app.service';
 import { SessionsModule } from './sessions/sessions.module';
 import { FacultadesModule } from './facultades/facultades.module';
 import { AuthModule } from './auth/auth.module';
+import { AvisosModule } from './avisos/avisos.module';
+import { GuiasTramitesModule } from './guias-tramites/guias-tramites.module';
 
 @Module({
   imports: [
@@ -29,6 +31,8 @@ import { AuthModule } from './auth/auth.module';
     SessionsModule,
     FacultadesModule,
     AuthModule,
+    AvisosModule,
+    GuiasTramitesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
