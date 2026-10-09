@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  UpdateDateColumn,
   ManyToOne,
   OneToMany,
   JoinColumn,
@@ -50,4 +51,7 @@ export class ForoComentario {
 
   @CreateDateColumn({ name: 'fecha_creacion' })
   fechaCreacion: Date;
+
+  @UpdateDateColumn({ name: 'fecha_actualizacion', nullable: true })
+  fechaActualizacion: Date;
 }

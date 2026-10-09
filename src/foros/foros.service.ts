@@ -6,6 +6,7 @@ import { ForoComentario } from './entities/foro-comentario.entity';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto';
 import { UpdatePublicacionDto } from './dto/update-publicacion.dto';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
+import { UpdateComentarioDto } from './dto/update-comentario.dto';
 import { User } from '../sessions/user.entity';
 
 @Injectable()
@@ -183,6 +184,28 @@ export class ForosService {
       },
       order: { fechaCreacion: 'ASC' },
     });
+  }
+
+  async updateComentario(id: number, updateComentarioDto: UpdateComentarioDto): Promise<ForoComentario> {
+    const comentario = await this.comentarioRepository.findOneBy({ id });
+    if (!comentario) {
+      throw new NotFoundException(`Comentario con ID ${id} no encontrado`);
+    }
+
+    // Límite de tiempo de 5 minutos desde la creación
+    const ahora = Date.now();
+    const fechaCreacion = new Date(comentario.fechaCreacion).getTime();
+    const limiteMinutos = 5;
+    const minutosTranscurridos = (ahora - fechaCreacion) / (1000 * 60);
+
+    if (minutosTranscurridos > limiteMinutos) {
+      throw new BadRequestException(
+        `El tiempo límite para editar este comentario (5 minutos) ha expirado. Han transcurrido ${Math.floor(minutosTranscurridos)} minutos.`,
+      );
+    }
+
+    const updated = this.comentarioRepository.merge(comentario, updateComentarioDto);
+    return await this.comentarioRepository.save(updated);
   }
 
   async votarComentario(id: number, delta: number): Promise<ForoComentario> {

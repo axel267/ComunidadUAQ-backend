@@ -14,6 +14,7 @@ import { ForosService } from './foros.service';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto';
 import { UpdatePublicacionDto } from './dto/update-publicacion.dto';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
+import { UpdateComentarioDto } from './dto/update-comentario.dto';
 
 @Controller('foros')
 export class ForosController {
@@ -92,6 +93,14 @@ export class ForosController {
   @Get(':id/comentarios')
   findComentariosByPublicacion(@Param('id', ParseIntPipe) publicacionId: number) {
     return this.forosService.findComentariosByPublicacion(publicacionId);
+  }
+
+  @Patch('comentarios/:id')
+  updateComentario(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateComentarioDto: UpdateComentarioDto,
+  ) {
+    return this.forosService.updateComentario(id, updateComentarioDto);
   }
 
   @Patch('comentarios/:id/votar')

@@ -1,9 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import compression from 'compression';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Habilitar compresión HTTP (Gzip/Brotli) para reducir tamaño de payloads JSON
+  app.use(compression());
 
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
 
