@@ -40,16 +40,19 @@ export class SessionsController {
     );
   }
 
+  /** POST /sessions/forgot-password — Solicitar recuperación de contraseña */
   @Post('forgot-password')
   forgotPassword(@Body('email') email: string) {
     return this.sessionsService.forgotPassword(email);
   }
 
+  /** GET /sessions/verify-reset-token — Verificar token de recuperación */
   @Get('verify-reset-token')
   verifyResetToken(@Query('token') token: string) {
     return this.sessionsService.verifyResetToken(token);
   }
 
+  /** Post /sessions/reset-password — Restablecer contraseña con token */
   @Post('reset-password')
   resetPassword(@Body('token') token: string, @Body('newPass') newPass: string) {
     return this.sessionsService.resetPassword(token, newPass);
