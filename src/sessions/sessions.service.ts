@@ -1,10 +1,10 @@
 import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
 import { MailService } from '../mail/mail.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class SessionsService {
