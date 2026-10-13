@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { SessionsModule } from './sessions/sessions.module';
 import { FacultadesModule } from './facultades/facultades.module';
 import { ForosModule } from './foros/foros.module';
+import { AvisosModule } from './avisos/avisos.module';
 import { AuthModule } from './auth/auth.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { AuthModule } from './auth/auth.module';
     SessionsModule,
     FacultadesModule,
     ForosModule,
+    AvisosModule,
     AuthModule,
   ],
   controllers: [AppController],
