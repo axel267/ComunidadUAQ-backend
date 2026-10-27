@@ -8,6 +8,8 @@ import { FacultadesModule } from './facultades/facultades.module';
 import { ForosModule } from './foros/foros.module';
 import { AvisosModule } from './avisos/avisos.module';
 import { AuthModule } from './auth/auth.module';
+import { AvisosModule } from './avisos/avisos.module';
+import { GuiasTramitesModule } from './guias-tramites/guias-tramites.module';
 
 @Module({
   imports: [
@@ -33,6 +35,8 @@ import { AuthModule } from './auth/auth.module';
     ForosModule,
     AvisosModule,
     AuthModule,
+    AvisosModule,
+    GuiasTramitesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
