@@ -51,6 +51,8 @@ services:
     image: nginx:alpine
     container_name: fif_nginx
     restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "80:80"
     volumes:
@@ -59,3 +61,4 @@ services:
       - postgres
       - redis
       - minio
+
