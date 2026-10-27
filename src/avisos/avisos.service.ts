@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Aviso, EstadoPublicacion } from './entities/aviso.entity';
+import { Aviso, NivelUrgencia, EstadoModeracion } from './entities/aviso.entity';
 import { CreateAvisoDto } from './dto/create-aviso.dto';
 import { UpdateAvisoDto } from './dto/update-aviso.dto';
 
@@ -13,49 +13,68 @@ export class AvisosService {
   ) {}
 
   async create(createAvisoDto: CreateAvisoDto): Promise<Aviso> {
-    try {
-      // Regla de negocio: el estado siempre se guarda como PENDIENTE al crear
-      const aviso = this.avisoRepository.create({
-        ...createAvisoDto,
-        estadoPublicacion: EstadoPublicacion.PENDIENTE,
-      });
-
-      return await this.avisoRepository.save(aviso);
-    } catch (error: any) {
-      // Manejar error de llave foránea (facultad o autor que no existe)
-      if (error.code === '23503' || (error.message && error.message.includes('violates foreign key constraint'))) {
-        throw new BadRequestException('La facultad o el autor especificado no existen en el sistema.');
-      }
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new BadRequestException(`Fallo al crear el aviso: ${errorMessage}`);
-    }
+    const aviso = this.avisoRepository.create(createAvisoDto);
+    return await this.avisoRepository.save(aviso);
   }
 
-  async findAll(): Promise<Aviso[]> {
+  async findAll(filters?: {
+    facultadId?: number;
+    autorId?: number;
+    urgencia?: NivelUrgencia;
+    estadoPublicacion?: EstadoModeracion;
+  }): Promise<Aviso[]> {
+    const where: any = {};
+
+    if (filters?.facultadId) {
+      where.facultadId = filters.facultadId;
+    }
+    if (filters?.autorId) {
+      where.autorId = filters.autorId;
+    }
+    if (filters?.urgencia) {
+      where.urgencia = filters.urgencia;
+    }
+    if (filters?.estadoPublicacion) {
+      where.estadoPublicacion = filters.estadoPublicacion;
+    }
+
     return await this.avisoRepository.find({
-      relations: { facultad: true, autor: true },
+      where,
+      relations: {
+        autor: true,
+        facultad: true,
+      },
+      order: {
+        fechaPublicacion: 'DESC',
+      },
     });
   }
 
   async findOne(id: number): Promise<Aviso> {
     const aviso = await this.avisoRepository.findOne({
       where: { id },
-      relations: { facultad: true, autor: true },
+      relations: {
+        autor: true,
+        facultad: true,
+      },
     });
+
     if (!aviso) {
-      throw new NotFoundException(`Aviso con ID ${id} no encontrado.`);
+      throw new NotFoundException(`Aviso con ID ${id} no encontrado`);
     }
+
     return aviso;
   }
 
   async update(id: number, updateAvisoDto: UpdateAvisoDto): Promise<Aviso> {
-    const aviso = await this.findOne(id); // lanza 404 si no existe
-    const updated = this.avisoRepository.merge(aviso, updateAvisoDto);
-    return await this.avisoRepository.save(updated);
+    const aviso = await this.findOne(id);
+    Object.assign(aviso, updateAvisoDto);
+    return await this.avisoRepository.save(aviso);
   }
 
-  async remove(id: number): Promise<void> {
-    const aviso = await this.findOne(id); // lanza 404 si no existe
+  async remove(id: number): Promise<{ message: string }> {
+    const aviso = await this.findOne(id);
     await this.avisoRepository.remove(aviso);
+    return { message: `Aviso con ID ${id} eliminado correctamente` };
   }
 }

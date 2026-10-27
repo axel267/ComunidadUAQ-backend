@@ -1,20 +1,4 @@
-import { IsOptional, IsString, IsEnum } from 'class-validator';
-import { NivelUrgencia } from '../entities/aviso.entity';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateAvisoDto } from './create-aviso.dto';
 
-export class UpdateAvisoDto {
-  @IsOptional()
-  @IsString()
-  titulo?: string;
-
-  @IsOptional()
-  @IsString()
-  contenido?: string;
-
-  @IsOptional()
-  @IsEnum(NivelUrgencia, { message: 'La urgencia debe ser BAJA, MEDIA o ALTA.' })
-  urgencia?: NivelUrgencia;
-
-  @IsOptional()
-  @IsString()
-  imagenesPortadaUrl?: string;
-}
+export class UpdateAvisoDto extends PartialType(CreateAvisoDto) {}

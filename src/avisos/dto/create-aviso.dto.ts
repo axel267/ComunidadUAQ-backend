@@ -1,28 +1,36 @@
-import { IsNotEmpty, IsString, IsEnum, IsOptional, IsInt } from 'class-validator';
-import { NivelUrgencia } from '../entities/aviso.entity';
+import { IsString, IsNotEmpty, IsOptional, IsEnum, IsInt } from 'class-validator';
+import { NivelUrgencia, EstadoModeracion } from '../entities/aviso.entity';
 
 export class CreateAvisoDto {
-  @IsNotEmpty({ message: 'El título es obligatorio.' })
   @IsString()
+  @IsNotEmpty()
   titulo: string;
 
-  @IsOptional()
   @IsString()
+  @IsOptional()
   contenido?: string;
 
-  @IsNotEmpty({ message: 'La urgencia es obligatoria.' })
-  @IsEnum(NivelUrgencia, { message: 'La urgencia debe ser BAJA, MEDIA o ALTA.' })
+  @IsEnum(NivelUrgencia)
+  @IsNotEmpty()
   urgencia: NivelUrgencia;
 
-  @IsOptional()
   @IsString()
+  @IsOptional()
   imagenesPortadaUrl?: string;
 
-  @IsNotEmpty({ message: 'El facultad_id es obligatorio.' })
   @IsInt()
-  facultadId: number;
+  @IsOptional()
+  facultadId?: number;
 
-  @IsNotEmpty({ message: 'El autor_id es obligatorio.' })
   @IsInt()
-  autorId: number;
+  @IsOptional()
+  autorId?: number;
+
+  @IsEnum(EstadoModeracion)
+  @IsOptional()
+  estadoPublicacion?: EstadoModeracion;
+
+  @IsString()
+  @IsOptional()
+  observacionesIa?: string;
 }

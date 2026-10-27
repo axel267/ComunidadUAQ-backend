@@ -1,7 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Query,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { AvisosService } from './avisos.service';
 import { CreateAvisoDto } from './dto/create-aviso.dto';
 import { UpdateAvisoDto } from './dto/update-aviso.dto';
+import { NivelUrgencia, EstadoModeracion } from './entities/aviso.entity';
 
 @Controller('avisos')
 export class AvisosController {
@@ -13,22 +24,35 @@ export class AvisosController {
   }
 
   @Get()
-  findAll() {
-    return this.avisosService.findAll();
+  findAll(
+    @Query('facultadId') facultadId?: string,
+    @Query('autorId') autorId?: string,
+    @Query('urgencia') urgencia?: NivelUrgencia,
+    @Query('estadoPublicacion') estadoPublicacion?: EstadoModeracion,
+  ) {
+    return this.avisosService.findAll({
+      facultadId: facultadId ? +facultadId : undefined,
+      autorId: autorId ? +autorId : undefined,
+      urgencia,
+      estadoPublicacion,
+    });
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.avisosService.findOne(+id);
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.avisosService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateAvisoDto: UpdateAvisoDto) {
-    return this.avisosService.update(+id, updateAvisoDto);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateAvisoDto: UpdateAvisoDto,
+  ) {
+    return this.avisosService.update(id, updateAvisoDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.avisosService.remove(+id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.avisosService.remove(id);
   }
 }
