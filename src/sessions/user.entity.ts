@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToMany, ManyToOne, JoinColumn, JoinTable } from 'typeorm';
 import { Facultade } from '../facultades/entities/facultade.entity';
+import { Role } from './role.entity';
 
 @Entity('usuarios')
 export class User {
@@ -28,6 +29,10 @@ export class User {
 
     @Column({ name: 'rol_id', type: 'int', nullable: true })
     rolId: number;
+
+    @ManyToOne(() => Role, (role) => role.usuarios, { nullable: true })
+    @JoinColumn({ name: 'rol_id' })
+    rol: Role;
 
     @Column({ name: 'estado_activo', default: true })
     estadoActivo: boolean;

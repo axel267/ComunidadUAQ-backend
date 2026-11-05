@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "module": "commonjs",
-    "moduleResolution": "bundler",
 
     "esModuleInterop": true,
     "declaration": true,

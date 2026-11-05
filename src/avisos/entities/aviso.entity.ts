@@ -4,10 +4,12 @@ import {
   Column,
   CreateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { User } from '../../sessions/user.entity';
 import { Facultade } from '../../facultades/entities/facultade.entity';
+import { LecturaAviso } from './lectura-aviso.entity';
 
 export enum NivelUrgencia {
   BAJA = 'BAJA',
@@ -71,4 +73,7 @@ export class Aviso {
 
   @Column({ name: 'observaciones_ia', type: 'text', nullable: true })
   observacionesIa: string;
+
+  @OneToMany(() => LecturaAviso, (lectura) => lectura.aviso)
+  lecturas: LecturaAviso[];
 }

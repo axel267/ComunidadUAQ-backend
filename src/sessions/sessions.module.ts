@@ -4,11 +4,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { SessionsService } from './sessions.service';
 import { SessionsController } from './sessions.controller';
 import { User } from './user.entity';
+import { Role } from './role.entity';
 import { MailModule } from '../mail/mail.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, Role]),
     JwtModule.register({
       secret: 'super-secreto-universidad-uaq', // En producción esto debería ir en un archivo .env
       signOptions: { expiresIn: '15m' }, // El token expira en 15 minutos
@@ -17,5 +18,6 @@ import { MailModule } from '../mail/mail.module';
   ],
   controllers: [SessionsController],
   providers: [SessionsService],
+  exports: [TypeOrmModule, SessionsService],
 })
 export class SessionsModule { }

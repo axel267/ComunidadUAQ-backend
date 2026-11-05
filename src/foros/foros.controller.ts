@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Query,
+  Headers,
   ParseIntPipe,
   ParseBoolPipe,
 } from '@nestjs/common';
@@ -52,8 +53,15 @@ export class ForosController {
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePublicacionDto: UpdatePublicacionDto,
+    @Query('usuarioId') queryUsuarioId?: string,
+    @Headers('x-user-id') headerUsuarioId?: string,
   ) {
-    return this.forosService.update(id, updatePublicacionDto);
+    const usuarioId =
+      updatePublicacionDto.usuarioId ??
+      (queryUsuarioId ? +queryUsuarioId : undefined) ??
+      (headerUsuarioId ? +headerUsuarioId : undefined);
+
+    return this.forosService.update(id, updatePublicacionDto, usuarioId);
   }
 
   @Patch(':id/votar')
@@ -76,8 +84,18 @@ export class ForosController {
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.forosService.remove(id);
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('usuarioId') bodyUsuarioId?: number,
+    @Query('usuarioId') queryUsuarioId?: string,
+    @Headers('x-user-id') headerUsuarioId?: string,
+  ) {
+    const usuarioId =
+      bodyUsuarioId ??
+      (queryUsuarioId ? +queryUsuarioId : undefined) ??
+      (headerUsuarioId ? +headerUsuarioId : undefined);
+
+    return this.forosService.remove(id, usuarioId);
   }
 
   // ==========================================

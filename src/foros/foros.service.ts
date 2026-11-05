@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ForoPublicacion } from './entities/foro-publicacion.entity';
@@ -99,8 +99,24 @@ export class ForosService {
     return publicacion;
   }
 
-  async update(id: number, updatePublicacionDto: UpdatePublicacionDto): Promise<ForoPublicacion> {
+  async update(
+    id: number,
+    updatePublicacionDto: UpdatePublicacionDto,
+    usuarioId?: number,
+  ): Promise<ForoPublicacion> {
+    if (!usuarioId) {
+      throw new BadRequestException(
+        'Se requiere el ID del usuario (usuarioId) para verificar que sea el dueño de la publicación.',
+      );
+    }
+
     const publicacion = await this.findOne(id);
+
+    if (publicacion.autorId !== usuarioId) {
+      throw new ForbiddenException(
+        'No tienes permisos para modificar esta publicación. Solo el dueño de la publicación puede actualizarla.',
+      );
+    }
 
     if (updatePublicacionDto.autorId && updatePublicacionDto.autorId !== publicacion.autorId) {
       const user = await this.userRepository.findOneBy({ id: updatePublicacionDto.autorId });
@@ -109,13 +125,28 @@ export class ForosService {
       }
     }
 
-    const updated = this.publicacionRepository.merge(publicacion, updatePublicacionDto);
+    const { usuarioId: _uid, ...datosActualizar } = updatePublicacionDto;
+    const updated = this.publicacionRepository.merge(publicacion, datosActualizar);
     return await this.publicacionRepository.save(updated);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, usuarioId?: number): Promise<{ message: string }> {
+    if (!usuarioId) {
+      throw new BadRequestException(
+        'Se requiere el ID del usuario (usuarioId) para verificar que sea el dueño de la publicación.',
+      );
+    }
+
     const publicacion = await this.findOne(id);
+
+    if (publicacion.autorId !== usuarioId) {
+      throw new ForbiddenException(
+        'No tienes permisos para eliminar esta publicación. Solo el dueño de la publicación puede eliminarla.',
+      );
+    }
+
     await this.publicacionRepository.remove(publicacion);
+    return { message: `Publicación con ID ${id} eliminada correctamente` };
   }
 
   async votarPublicacion(id: number, delta: number): Promise<ForoPublicacion> {

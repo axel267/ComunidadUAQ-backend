@@ -57,6 +57,7 @@ export class SessionsService {
   async createSession(expediente: number, email: string, pass: string) {
     const user = await this.usersRepository.findOne({
       where: { email, expediente },
+      relations: { rol: true },
     });
 
     if (!user) {
@@ -75,6 +76,8 @@ export class SessionsService {
         email: user.email,
         nombre: user.nombre,
         expediente: user.expediente,
+        rolId: user.rolId,
+        rol: user.rol ? user.rol.nombre : null,
       },
     };
   }

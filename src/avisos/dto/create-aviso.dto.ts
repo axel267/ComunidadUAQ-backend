@@ -26,6 +26,10 @@ export class CreateAvisoDto {
   @IsOptional()
   autorId?: number;
 
+  @IsInt()
+  @IsOptional()
+  usuarioId?: number;
+
   @IsEnum(EstadoModeracion)
   @IsOptional()
   estadoPublicacion?: EstadoModeracion;
