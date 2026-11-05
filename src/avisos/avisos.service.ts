@@ -11,6 +11,8 @@ import { LecturaAviso } from './entities/lectura-aviso.entity';
 import { User } from '../sessions/user.entity';
 import { CreateAvisoDto } from './dto/create-aviso.dto';
 import { UpdateAvisoDto } from './dto/update-aviso.dto';
+import { RoleId, RoleName } from '../auth/constants/roles.enum';
+import { validarPermisoFacultadOArea } from '../auth/utils/area-permissions';
 
 @Injectable()
 export class AvisosService {
@@ -24,48 +26,50 @@ export class AvisosService {
   ) {}
 
   /**
-   * Valida si un usuario existe y tiene rol de Administrador.
+   * Obtiene y valida a un usuario para operaciones con RBAC y facultades/áreas.
    */
-  private async validarEsAdmin(usuarioId?: number): Promise<User> {
+  async obtenerYValidarUsuario(usuarioId?: number): Promise<User> {
     if (!usuarioId) {
       throw new BadRequestException(
-        'Se requiere el ID del usuario (usuarioId) para verificar permisos de administrador.',
+        'Se requiere la identificación del usuario para verificar sus permisos de acceso.',
       );
     }
 
     const usuario = await this.userRepository.findOne({
       where: { id: usuarioId },
-      relations: { rol: true },
+      relations: { rol: true, facultades: true },
     });
 
     if (!usuario) {
-      throw new NotFoundException(`Usuario con ID ${usuarioId} no encontrado`);
+      throw new NotFoundException(`Usuario con ID ${usuarioId} no encontrado.`);
     }
 
-    const esAdmin =
-      usuario.rolId === 1 ||
-      usuario.rol?.nombre?.toLowerCase().includes('admin') ||
-      usuario.rol?.permisos?.all === true;
-
-    if (!esAdmin) {
-      throw new ForbiddenException(
-        'Acceso denegado. Solo los administradores pueden realizar esta acción sobre los avisos.',
-      );
+    if (!usuario.estadoActivo) {
+      throw new ForbiddenException('La cuenta del usuario está desactivada.');
     }
 
     return usuario;
   }
 
-  async create(createAvisoDto: CreateAvisoDto, usuarioId?: number): Promise<Aviso> {
-    const idAValidar = usuarioId ?? createAvisoDto.autorId;
-    if (idAValidar) {
-      await this.validarEsAdmin(idAValidar);
-    }
+  async create(
+    createAvisoDto: CreateAvisoDto,
+    usuarioId?: number,
+    userAutenticado?: User,
+  ): Promise<Aviso> {
+    const user =
+      userAutenticado ||
+      (await this.obtenerYValidarUsuario(usuarioId ?? createAvisoDto.autorId));
+
+    // Validar permisos por rol y área/facultad:
+    // - Administrador: Acceso global
+    // - Docente / Coordinación: Solo en sus facultades asignadas
+    // - Estudiante: No tiene permisos de publicación
+    validarPermisoFacultadOArea(user, createAvisoDto.facultadId);
 
     const { usuarioId: _uid, ...datosAviso } = createAvisoDto;
     const aviso = this.avisoRepository.create({
       ...datosAviso,
-      autorId: idAValidar ?? datosAviso.autorId,
+      autorId: user.id,
     });
     return await this.avisoRepository.save(aviso);
   }
@@ -123,22 +127,40 @@ export class AvisosService {
     id: number,
     updateAvisoDto: UpdateAvisoDto,
     usuarioId?: number,
+    userAutenticado?: User,
   ): Promise<Aviso> {
-    await this.validarEsAdmin(usuarioId);
-
+    const user =
+      userAutenticado ||
+      (await this.obtenerYValidarUsuario(usuarioId ?? updateAvisoDto.usuarioId));
     const aviso = await this.findOne(id);
+
+    // Validar permisos por rol y área/facultad sobre el aviso original o nueva facultad
+    validarPermisoFacultadOArea(user, updateAvisoDto.facultadId || aviso.facultadId);
+
     const { usuarioId: _uid, ...datosActualizar } = updateAvisoDto;
     Object.assign(aviso, datosActualizar);
     return await this.avisoRepository.save(aviso);
   }
 
-  async remove(id: number, usuarioId?: number): Promise<{ message: string }> {
-    await this.validarEsAdmin(usuarioId);
-
+  async remove(
+    id: number,
+    usuarioId?: number,
+    userAutenticado?: User,
+  ): Promise<{ message: string }> {
+    const user =
+      userAutenticado || (await this.obtenerYValidarUsuario(usuarioId));
     const aviso = await this.findOne(id);
+
+    // Validar permisos por rol y área/facultad
+    validarPermisoFacultadOArea(user, aviso.facultadId);
+
     await this.avisoRepository.remove(aviso);
     return { message: `Aviso con ID ${id} eliminado correctamente` };
   }
+
+  // ==========================================
+  // CONFIRMACIÓN Y ESTADO DE LECTURA DE AVISOS
+  // ==========================================
 
   async marcarComoLeido(
     avisoId: number,
@@ -204,7 +226,25 @@ export class AvisosService {
 
   async obtenerLecturas(
     avisoId: number,
+    usuarioId?: number,
+    userAutenticado?: User,
   ): Promise<{ totalLecturas: number; lecturas: LecturaAviso[] }> {
+    if (usuarioId || userAutenticado) {
+      const user =
+        userAutenticado || (await this.obtenerYValidarUsuario(usuarioId));
+      // Según la matriz, solo Coordinación y Administradores tienen acceso a moderación/historial de lecturas
+      if (
+        user.rolId === RoleId.ESTUDIANTE ||
+        user.rolId === RoleId.DOCENTE ||
+        user.rol?.nombre === RoleName.ESTUDIANTE ||
+        user.rol?.nombre === RoleName.DOCENTE
+      ) {
+        throw new ForbiddenException(
+          'Solo el personal de Coordinación y Administradores pueden auditar el historial de lecturas.',
+        );
+      }
+    }
+
     await this.findOne(avisoId);
 
     const [lecturas, totalLecturas] = await this.lecturaAvisoRepository.findAndCount({
@@ -223,4 +263,3 @@ export class AvisosService {
     };
   }
 }
-

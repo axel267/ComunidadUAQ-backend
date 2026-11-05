@@ -1,25 +1,75 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GuiaTramite } from './entities/guia-tramite.entity';
 import { CreateGuiaTramiteDto } from './dto/create-guia-tramite.dto';
 import { UpdateGuiaTramiteDto } from './dto/update-guia-tramite.dto';
+import { User } from '../sessions/user.entity';
+import { validarPermisoFacultadOArea } from '../auth/utils/area-permissions';
 
 @Injectable()
 export class GuiasTramitesService {
   constructor(
     @InjectRepository(GuiaTramite)
     private readonly guiaRepository: Repository<GuiaTramite>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
   ) {}
 
-  async create(createGuiaTramiteDto: CreateGuiaTramiteDto): Promise<GuiaTramite> {
+  private async obtenerYValidarUsuario(usuarioId?: number): Promise<User> {
+    if (!usuarioId) {
+      throw new BadRequestException(
+        'Se requiere la identificación del usuario para verificar permisos.',
+      );
+    }
+
+    const usuario = await this.userRepository.findOne({
+      where: { id: usuarioId },
+      relations: { rol: true, facultades: true },
+    });
+
+    if (!usuario) {
+      throw new NotFoundException(`Usuario con ID ${usuarioId} no encontrado.`);
+    }
+
+    if (!usuario.estadoActivo) {
+      throw new ForbiddenException('La cuenta de usuario está desactivada.');
+    }
+
+    return usuario;
+  }
+
+  async create(
+    createGuiaTramiteDto: CreateGuiaTramiteDto,
+    usuarioId?: number,
+    userAutenticado?: User,
+  ): Promise<GuiaTramite> {
+    const user =
+      userAutenticado ||
+      (await this.obtenerYValidarUsuario(usuarioId ?? createGuiaTramiteDto.autorId));
+
+    // Validar RBAC por área/facultad:
+    // Administrador: Global
+    // Docente / Coordinador: En sus facultades asignadas
+    // Estudiante: No puede gestionar guías
+    validarPermisoFacultadOArea(user, createGuiaTramiteDto.facultadId);
+
     try {
-      // cascade: true en la entidad permite que al crear la guía
-      // se guarden automáticamente los pasos asociados en una sola operación
-      const guia = this.guiaRepository.create(createGuiaTramiteDto);
+      const guia = this.guiaRepository.create({
+        ...createGuiaTramiteDto,
+        autorId: user.id,
+      });
       return await this.guiaRepository.save(guia);
     } catch (error: any) {
-      if (error.code === '23503' || (error.message && error.message.includes('violates foreign key constraint'))) {
+      if (
+        error.code === '23503' ||
+        (error.message && error.message.includes('violates foreign key constraint'))
+      ) {
         throw new BadRequestException('La facultad o el autor especificado no existen en el sistema.');
       }
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -46,15 +96,38 @@ export class GuiasTramitesService {
     return guia;
   }
 
-  async update(id: number, updateGuiaTramiteDto: UpdateGuiaTramiteDto): Promise<GuiaTramite> {
+  async update(
+    id: number,
+    updateGuiaTramiteDto: UpdateGuiaTramiteDto,
+    usuarioId?: number,
+    userAutenticado?: User,
+  ): Promise<GuiaTramite> {
+    const user =
+      userAutenticado || (await this.obtenerYValidarUsuario(usuarioId));
     const guia = await this.findOne(id);
+
+    // Validar permiso en la facultad destino o existente
+    validarPermisoFacultadOArea(
+      user,
+      updateGuiaTramiteDto.facultadId || guia.facultadId,
+    );
+
     const updated = this.guiaRepository.merge(guia, updateGuiaTramiteDto);
     return await this.guiaRepository.save(updated);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(
+    id: number,
+    usuarioId?: number,
+    userAutenticado?: User,
+  ): Promise<{ message: string }> {
+    const user =
+      userAutenticado || (await this.obtenerYValidarUsuario(usuarioId));
     const guia = await this.findOne(id);
-    // Los pasos se eliminan automáticamente gracias al ON DELETE CASCADE del SQL
+
+    validarPermisoFacultadOArea(user, guia.facultadId);
+
     await this.guiaRepository.remove(guia);
+    return { message: `Guía con ID ${id} eliminada correctamente` };
   }
 }

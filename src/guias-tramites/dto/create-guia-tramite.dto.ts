@@ -32,9 +32,9 @@ export class CreateGuiaTramiteDto {
   @IsString()
   descripcion?: string;
 
-  @IsNotEmpty({ message: 'El autor_id es obligatorio.' })
+  @IsOptional()
   @IsInt()
-  autorId: number;
+  autorId?: number;
 
   @IsNotEmpty({ message: 'El facultad_id es obligatorio.' })
   @IsInt()

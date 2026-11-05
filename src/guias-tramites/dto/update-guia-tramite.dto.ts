@@ -1,15 +1,9 @@
-import { IsOptional, IsString } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateGuiaTramiteDto } from './create-guia-tramite.dto';
+import { IsInt, IsOptional } from 'class-validator';
 
-export class UpdateGuiaTramiteDto {
+export class UpdateGuiaTramiteDto extends PartialType(CreateGuiaTramiteDto) {
+  @IsInt()
   @IsOptional()
-  @IsString()
-  titulo?: string;
-
-  @IsOptional()
-  @IsString()
-  descripcion?: string;
-
-  @IsOptional()
-  @IsString()
-  imagenUrl?: string;
+  usuarioId?: number;
 }

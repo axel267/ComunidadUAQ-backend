@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { MailService } from '../mail/mail.service';
+import { RoleId } from '../auth/constants/roles.enum';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -57,11 +58,15 @@ export class SessionsService {
   async createSession(expediente: number, email: string, pass: string) {
     const user = await this.usersRepository.findOne({
       where: { email, expediente },
-      relations: { rol: true },
+      relations: { rol: true, facultades: true },
     });
 
     if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    if (!user.estadoActivo) {
+      throw new UnauthorizedException('La cuenta de usuario está desactivada');
     }
 
     const passwordMatch = await bcrypt.compare(pass, user.pass);
@@ -69,8 +74,23 @@ export class SessionsService {
       throw new UnauthorizedException('Credenciales inválidas');
     }
 
+    // Generar el payload y firmar el token JWT
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      expediente: user.expediente,
+      rolId: user.rolId,
+      rol: user.rol?.nombre,
+      area: user.area,
+      carrera: user.carrera,
+      facultades: user.facultades?.map((f) => f.id) || [],
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+
     return {
       message: 'Sesión iniciada exitosamente',
+      accessToken,
       user: {
         id: user.id,
         email: user.email,
@@ -78,6 +98,9 @@ export class SessionsService {
         expediente: user.expediente,
         rolId: user.rolId,
         rol: user.rol ? user.rol.nombre : null,
+        area: user.area,
+        carrera: user.carrera,
+        facultades: user.facultades,
       },
     };
   }
@@ -90,7 +113,26 @@ export class SessionsService {
     nombre: string,
     facultadesIds: number[],
     rolId: number,
+    area?: string,
+    carrera?: string,
   ) {
+    // 1. Validar dominio institucional obligatorio (@uaq.mx o @alumnos.uaq.mx)
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@(uaq\.mx|alumnos\.uaq\.mx)$/i;
+    if (!emailRegex.test(email)) {
+      throw new BadRequestException(
+        'El correo debe pertenecer al dominio institucional (@uaq.mx o @alumnos.uaq.mx).',
+      );
+    }
+
+    // 2. Validación académica de condición activa:
+    // Los correos con dominio de alumno (@alumnos.uaq.mx) solo pueden asignarse con rol Estudiante
+    const esCorreoAlumno = email.toLowerCase().endsWith('@alumnos.uaq.mx');
+    if (esCorreoAlumno && rolId !== RoleId.ESTUDIANTE) {
+      throw new BadRequestException(
+        'Validación académica: Los correos con dominio @alumnos.uaq.mx solo pueden asignarse con el rol de Estudiante.',
+      );
+    }
+
     try {
       // Verificar si el usuario ya existe
       const existingUser = await this.usersRepository.findOne({
@@ -115,6 +157,8 @@ export class SessionsService {
         nombre,
         facultades: facultadesIds.map((id) => ({ id })),
         rolId,
+        area,
+        carrera,
         estadoActivo: true,
       });
 
@@ -131,6 +175,9 @@ export class SessionsService {
           email: newUser.email,
           nombre: newUser.nombre,
           expediente: newUser.expediente,
+          rolId: newUser.rolId,
+          area: newUser.area,
+          carrera: newUser.carrera,
         },
       };
     } catch (error: any) {

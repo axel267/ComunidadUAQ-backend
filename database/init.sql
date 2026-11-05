@@ -25,6 +25,8 @@ CREATE TABLE Usuarios (
     contrasena VARCHAR(255) NOT NULL,
     facultad_id INT REFERENCES Facultades(id),
     rol_id INT REFERENCES Roles(id),
+    area VARCHAR(150),
+    carrera VARCHAR(150),
     estado_activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -98,9 +100,11 @@ CREATE TABLE Pasos_Guia (
 );
 
 -- Datos semilla básicos para poder empezar
-INSERT INTO Roles (nombre, permisos) VALUES 
-('Administrador', '{"all": true}'),
-('Estudiante', '{"read_avisos": true, "post_foro": true}');
+INSERT INTO Roles (id, nombre, permisos) VALUES 
+(1, 'Administrador', '{"all": true}'),
+(2, 'Estudiante', '{"read_avisos": true, "post_foro": true}'),
+(3, 'Docente / Encargado de Área', '{"manage_avisos_area": true, "manage_guias_area": true}'),
+(4, 'Coordinación / Administrativo', '{"manage_avisos_area": true, "manage_guias_area": true, "view_history": true}');
 
 INSERT INTO Facultades (nombre, abreviatura) VALUES 
 ('Facultad de Informática', 'FIF'),

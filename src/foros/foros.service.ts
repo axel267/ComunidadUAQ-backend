@@ -7,6 +7,7 @@ import { CreatePublicacionDto } from './dto/create-publicacion.dto';
 import { UpdatePublicacionDto } from './dto/update-publicacion.dto';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
 import { User } from '../sessions/user.entity';
+import { RoleId, RoleName } from '../auth/constants/roles.enum';
 
 @Injectable()
 export class ForosService {
@@ -103,8 +104,10 @@ export class ForosService {
     id: number,
     updatePublicacionDto: UpdatePublicacionDto,
     usuarioId?: number,
+    userAutenticado?: User,
   ): Promise<ForoPublicacion> {
-    if (!usuarioId) {
+    const uid = userAutenticado?.id ?? usuarioId;
+    if (!uid) {
       throw new BadRequestException(
         'Se requiere el ID del usuario (usuarioId) para verificar que sea el dueño de la publicación.',
       );
@@ -112,7 +115,7 @@ export class ForosService {
 
     const publicacion = await this.findOne(id);
 
-    if (publicacion.autorId !== usuarioId) {
+    if (publicacion.autorId !== uid) {
       throw new ForbiddenException(
         'No tienes permisos para modificar esta publicación. Solo el dueño de la publicación puede actualizarla.',
       );
@@ -130,18 +133,37 @@ export class ForosService {
     return await this.publicacionRepository.save(updated);
   }
 
-  async remove(id: number, usuarioId?: number): Promise<{ message: string }> {
-    if (!usuarioId) {
+  async remove(
+    id: number,
+    usuarioId?: number,
+    userAutenticado?: User,
+  ): Promise<{ message: string }> {
+    const uid = userAutenticado?.id ?? usuarioId;
+    if (!uid) {
       throw new BadRequestException(
-        'Se requiere el ID del usuario (usuarioId) para verificar que sea el dueño de la publicación.',
+        'Se requiere el ID del usuario (usuarioId) para verificar permisos sobre la publicación.',
       );
     }
 
     const publicacion = await this.findOne(id);
+    const esDuenio = publicacion.autorId === uid;
 
-    if (publicacion.autorId !== usuarioId) {
+    const user =
+      userAutenticado ||
+      (await this.userRepository.findOne({
+        where: { id: uid },
+        relations: { rol: true },
+      }));
+
+    const esModeradorOAdmin =
+      user?.rolId === RoleId.ADMIN ||
+      user?.rolId === RoleId.COORDINADOR ||
+      user?.rol?.nombre === RoleName.ADMIN ||
+      user?.rol?.nombre === RoleName.COORDINADOR;
+
+    if (!esDuenio && !esModeradorOAdmin) {
       throw new ForbiddenException(
-        'No tienes permisos para eliminar esta publicación. Solo el dueño de la publicación puede eliminarla.',
+        'No tienes permisos para eliminar esta publicación. Solo el dueño o el personal de moderación/administración puede eliminarla.',
       );
     }
 

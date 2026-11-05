@@ -34,6 +34,12 @@ export class User {
     @JoinColumn({ name: 'rol_id' })
     rol: Role;
 
+    @Column({ name: 'area', type: 'varchar', length: 150, nullable: true })
+    area: string;
+
+    @Column({ name: 'carrera', type: 'varchar', length: 150, nullable: true })
+    carrera: string;
+
     @Column({ name: 'estado_activo', default: true })
     estadoActivo: boolean;
 

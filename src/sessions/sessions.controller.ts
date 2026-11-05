@@ -27,6 +27,8 @@ export class SessionsController {
       body.nombre,
       body.facultadesIds,
       body.rolId,
+      body.area,
+      body.carrera,
     );
   }
 

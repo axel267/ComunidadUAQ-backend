@@ -8,13 +8,17 @@ import {
   Delete,
   Query,
   Headers,
+  UseGuards,
   ParseIntPipe,
-  ParseBoolPipe,
 } from '@nestjs/common';
 import { ForosService } from './foros.service';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto';
 import { UpdatePublicacionDto } from './dto/update-publicacion.dto';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Public } from '../auth/decorators/public.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { User } from '../sessions/user.entity';
 
 @Controller('foros')
 export class ForosController {
@@ -25,10 +29,18 @@ export class ForosController {
   // ==========================================
 
   @Post()
-  create(@Body() createPublicacionDto: CreatePublicacionDto) {
+  @UseGuards(JwtAuthGuard)
+  create(
+    @Body() createPublicacionDto: CreatePublicacionDto,
+    @CurrentUser() user?: User,
+  ) {
+    if (user && !createPublicacionDto.autorId) {
+      createPublicacionDto.autorId = user.id;
+    }
     return this.forosService.create(createPublicacionDto);
   }
 
+  @Public()
   @Get()
   findAll(
     @Query('categoria') categoria?: string,
@@ -44,24 +56,28 @@ export class ForosController {
     });
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.forosService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePublicacionDto: UpdatePublicacionDto,
+    @CurrentUser() user?: User,
     @Query('usuarioId') queryUsuarioId?: string,
     @Headers('x-user-id') headerUsuarioId?: string,
   ) {
     const usuarioId =
+      user?.id ??
       updatePublicacionDto.usuarioId ??
       (queryUsuarioId ? +queryUsuarioId : undefined) ??
       (headerUsuarioId ? +headerUsuarioId : undefined);
 
-    return this.forosService.update(id, updatePublicacionDto, usuarioId);
+    return this.forosService.update(id, updatePublicacionDto, usuarioId, user);
   }
 
   @Patch(':id/votar')
@@ -84,18 +100,21 @@ export class ForosController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   remove(
     @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user?: User,
     @Body('usuarioId') bodyUsuarioId?: number,
     @Query('usuarioId') queryUsuarioId?: string,
     @Headers('x-user-id') headerUsuarioId?: string,
   ) {
     const usuarioId =
+      user?.id ??
       bodyUsuarioId ??
       (queryUsuarioId ? +queryUsuarioId : undefined) ??
       (headerUsuarioId ? +headerUsuarioId : undefined);
 
-    return this.forosService.remove(id, usuarioId);
+    return this.forosService.remove(id, usuarioId, user);
   }
 
   // ==========================================
@@ -103,10 +122,18 @@ export class ForosController {
   // ==========================================
 
   @Post('comentarios')
-  createComentario(@Body() createComentarioDto: CreateComentarioDto) {
+  @UseGuards(JwtAuthGuard)
+  createComentario(
+    @Body() createComentarioDto: CreateComentarioDto,
+    @CurrentUser() user?: User,
+  ) {
+    if (user && !createComentarioDto.autorId) {
+      createComentarioDto.autorId = user.id;
+    }
     return this.forosService.createComentario(createComentarioDto);
   }
 
+  @Public()
   @Get(':id/comentarios')
   findComentariosByPublicacion(@Param('id', ParseIntPipe) publicacionId: number) {
     return this.forosService.findComentariosByPublicacion(publicacionId);
@@ -122,6 +149,7 @@ export class ForosController {
   }
 
   @Delete('comentarios/:id')
+  @UseGuards(JwtAuthGuard)
   removeComentario(@Param('id', ParseIntPipe) id: number) {
     return this.forosService.removeComentario(id);
   }
