@@ -8,10 +8,11 @@ import { User } from '../sessions/user.entity';
 import { Role } from '../sessions/role.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Aviso, LecturaAviso, User, Role])],
+  imports: [
+    TypeOrmModule.forFeature([Aviso, LecturaAviso, User, Role]),
+  ],
   controllers: [AvisosController],
   providers: [AvisosService],
   exports: [AvisosService],
 })
 export class AvisosModule {}
-

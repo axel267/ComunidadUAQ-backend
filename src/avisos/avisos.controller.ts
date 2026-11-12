@@ -72,6 +72,17 @@ export class AvisosController {
   }
 
   /**
+   * GET /avisos/urgentes/pendientes
+   * Consulta los comunicados de urgencia ALTA o URGENTE que el usuario autenticado no ha confirmado haber leido.
+   * Alimenta el modal bloqueante de Acuse de Recibo en la aplicacion.
+   */
+  @Get('urgentes/pendientes')
+  @UseGuards(JwtAuthGuard)
+  obtenerUrgentesPendientes(@CurrentUser() user: User) {
+    return this.avisosService.obtenerAvisosUrgentesPendientes(user.id);
+  }
+
+  /**
    * GET /avisos/:id
    * Detalle de un aviso específico (público).
    */

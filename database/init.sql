@@ -1,5 +1,5 @@
 -- Enums para los estados
-CREATE TYPE nivel_urgencia AS ENUM ('BAJA', 'MEDIA', 'ALTA');
+CREATE TYPE nivel_urgencia AS ENUM ('BAJA', 'MEDIA', 'ALTA', 'URGENTE');
 CREATE TYPE estado_moderacion AS ENUM ('PENDIENTE', 'APROBADA', 'RECHAZADA');
 CREATE TYPE estado_foro AS ENUM ('ABIERTA', 'CERRADA', 'RESUELTA');
 

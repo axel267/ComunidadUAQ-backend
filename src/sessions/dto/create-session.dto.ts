@@ -1,13 +1,23 @@
-import { IsEmail, IsInt, IsString, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class CreateSessionDto {
-  @IsInt()
-  expediente: number;
+  @IsOptional()
+  expediente?: number;
 
-  @IsEmail()
-  email: string;
+  @IsOptional()
+  email?: string;
 
+  @IsOptional()
+  @IsString()
+  identificador?: string;
+
+  @IsOptional()
   @IsString()
   @MinLength(6)
-  pass: string;
+  pass?: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(6)
+  password?: string;
 }

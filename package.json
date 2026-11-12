@@ -13,6 +13,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "seed": "ts-node -r tsconfig-paths/register src/database/seeds/seed.ts",
     "lint": "oxlint src/ test/",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -39,6 +40,7 @@
     "typeorm": "^1.1.1"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.6.0",
     "@nestjs/cli": "^12.0.0",
     "@nestjs/mau": "^0.2.6",
     "@nestjs/schematics": "^12.0.0",

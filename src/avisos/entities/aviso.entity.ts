@@ -15,6 +15,7 @@ export enum NivelUrgencia {
   BAJA = 'BAJA',
   MEDIA = 'MEDIA',
   ALTA = 'ALTA',
+  URGENTE = 'URGENTE',
 }
 
 export enum EstadoModeracion {

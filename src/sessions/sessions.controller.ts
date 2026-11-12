@@ -8,14 +8,21 @@ import { ChangePasswordDto } from './dto/change-password.dto';
 export class SessionsController {
   constructor(private readonly sessionsService: SessionsService) { }
 
-  /** POST /sessions — Iniciar sesión */
+  /** POST /sessions y POST /sessions/login — Iniciar sesión */
   @Post()
   create(@Body() body: CreateSessionDto) {
     return this.sessionsService.createSession(
       body.expediente,
       body.email,
       body.pass,
+      body.identificador,
+      body.password,
     );
+  }
+
+  @Post('login')
+  login(@Body() body: CreateSessionDto) {
+    return this.create(body);
   }
 
   /** POST /sessions/register — Crear cuenta (genera y envía contraseña por correo) */

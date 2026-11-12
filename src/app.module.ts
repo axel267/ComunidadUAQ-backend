@@ -9,6 +9,7 @@ import { ForosModule } from './foros/foros.module';
 import { AvisosModule } from './avisos/avisos.module';
 import { AuthModule } from './auth/auth.module';
 import { GuiasTramitesModule } from './guias-tramites/guias-tramites.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { GuiasTramitesModule } from './guias-tramites/guias-tramites.module';
     AvisosModule,
     AuthModule,
     GuiasTramitesModule,
+    MailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

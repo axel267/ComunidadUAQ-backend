@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { User } from '../sessions/user.entity';
+import { SessionsModule } from '../sessions/sessions.module';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 
@@ -12,6 +13,7 @@ import { RolesGuard } from './guards/roles.guard';
 @Module({
   imports: [
     TypeOrmModule.forFeature([User]),
+    SessionsModule,
     JwtModule.registerAsync({
       global: true,
       imports: [ConfigModule],

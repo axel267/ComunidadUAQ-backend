@@ -55,9 +55,45 @@ export class SessionsService {
 
   // ─── Iniciar sesión ─────────────────────────────────────────────────────────
 
-  async createSession(expediente: number, email: string, pass: string) {
+  async createSession(
+    expediente?: number,
+    email?: string,
+    pass?: string,
+    identificador?: string,
+    password?: string,
+  ) {
+    const rawPass = pass || password;
+    if (!rawPass) {
+      throw new BadRequestException('La contraseña es requerida');
+    }
+
+    let searchEmail = email?.trim().toLowerCase();
+    let searchExpediente = expediente;
+
+    if (identificador) {
+      const trimmed = identificador.trim();
+      if (trimmed.includes('@')) {
+        searchEmail = trimmed.toLowerCase();
+      } else if (!isNaN(Number(trimmed))) {
+        searchExpediente = Number(trimmed);
+      } else {
+        searchEmail = trimmed.toLowerCase();
+      }
+    } else if (email && !email.includes('@') && !isNaN(Number(email.trim()))) {
+      searchExpediente = Number(email.trim());
+      searchEmail = undefined;
+    }
+
+    if (!searchEmail && !searchExpediente) {
+      throw new BadRequestException('Debe ingresar su correo institucional o expediente');
+    }
+
+    const where: any = {};
+    if (searchEmail) where.email = searchEmail;
+    if (searchExpediente) where.expediente = searchExpediente;
+
     const user = await this.usersRepository.findOne({
-      where: { email, expediente },
+      where,
       relations: { rol: true, facultades: true },
     });
 
@@ -69,7 +105,7 @@ export class SessionsService {
       throw new UnauthorizedException('La cuenta de usuario está desactivada');
     }
 
-    const passwordMatch = await bcrypt.compare(pass, user.pass);
+    const passwordMatch = await bcrypt.compare(rawPass, user.pass);
     if (!passwordMatch) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
@@ -248,8 +284,8 @@ export class SessionsService {
     // Aquí normalmente enviarías el correo con Nodemailer.
     // Por ahora simularemos el correo imprimiendo el link en la consola.
     const resetLink = `http://localhost:3000/reset-password?token=${token}`;
-    console.log(`\n📧 SIMULACIÓN DE CORREO ENVIADO A: ${email}`);
-    console.log(`🔗 Haz clic aquí para recuperar tu cuenta: ${resetLink}\n`);
+    console.log(`\nSIMULACION DE CORREO ENVIADO A: ${email}`);
+    console.log(`Haz clic aqui para recuperar tu cuenta: ${resetLink}\n`);
 
     return { message: 'Si el correo está registrado, se ha enviado un enlace de recuperación.' };
   }
