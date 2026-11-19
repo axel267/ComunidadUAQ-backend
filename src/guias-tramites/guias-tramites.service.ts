@@ -7,6 +7,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GuiaTramite } from './entities/guia-tramite.entity';
+import { PasoGuia } from './entities/paso-guia.entity';
 import { CreateGuiaTramiteDto } from './dto/create-guia-tramite.dto';
 import { UpdateGuiaTramiteDto } from './dto/update-guia-tramite.dto';
 import { User } from '../sessions/user.entity';
@@ -19,6 +20,8 @@ export class GuiasTramitesService {
     private readonly guiaRepository: Repository<GuiaTramite>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @InjectRepository(PasoGuia)
+    private readonly pasoRepository: Repository<PasoGuia>,
   ) {}
 
   private async obtenerYValidarUsuario(usuarioId?: number): Promise<User> {
@@ -112,8 +115,23 @@ export class GuiasTramitesService {
       updateGuiaTramiteDto.facultadId || guia.facultadId,
     );
 
-    const updated = this.guiaRepository.merge(guia, updateGuiaTramiteDto);
-    return await this.guiaRepository.save(updated);
+    if (updateGuiaTramiteDto.pasos !== undefined) {
+      await this.pasoRepository.delete({ guiaId: id });
+    }
+
+    const { pasos, ...datosGuia } = updateGuiaTramiteDto;
+    const updated = this.guiaRepository.merge(guia, datosGuia);
+    if (pasos) {
+      updated.pasos = pasos.map((p, idx) =>
+        this.pasoRepository.create({
+          ...p,
+          guiaId: id,
+          ordenPaso: p.ordenPaso ?? idx + 1,
+        }),
+      );
+    }
+    await this.guiaRepository.save(updated);
+    return this.findOne(id);
   }
 
   async remove(
