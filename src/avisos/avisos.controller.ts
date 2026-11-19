@@ -10,6 +10,7 @@ import {
   Headers,
   UseGuards,
   ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { AvisosService } from './avisos.service';
 import { CreateAvisoDto } from './dto/create-aviso.dto';
@@ -77,9 +78,15 @@ export class AvisosController {
    * Alimenta el modal bloqueante de Acuse de Recibo en la aplicacion.
    */
   @Get('urgentes/pendientes')
-  @UseGuards(JwtAuthGuard)
-  obtenerUrgentesPendientes(@CurrentUser() user: User) {
-    return this.avisosService.obtenerAvisosUrgentesPendientes(user.id);
+  obtenerUrgentesPendientes(
+    @CurrentUser() user?: User,
+    @Query('usuarioId') queryUsuarioId?: string,
+  ) {
+    const usuarioId = user?.id ?? (queryUsuarioId ? +queryUsuarioId : undefined);
+    if (!usuarioId) {
+      throw new BadRequestException('Se requiere usuarioId o sesion activa');
+    }
+    return this.avisosService.obtenerAvisosUrgentesPendientes(usuarioId);
   }
 
   /**
@@ -142,12 +149,19 @@ export class AvisosController {
   // CONFIRMACIÓN Y ESTADO DE LECTURA DE AVISOS
   // ==========================================
 
+  @Public()
+  @UseGuards(JwtAuthGuard)
   @Post(':id/leer')
   marcarComoLeido(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: ConfirmarLecturaDto,
+    @CurrentUser() user?: User,
   ) {
-    return this.avisosService.marcarComoLeido(id, dto.usuarioId);
+    const usuarioId = user?.id ?? dto.usuarioId;
+    if (!usuarioId) {
+      throw new BadRequestException('Se requiere usuarioId o sesion activa');
+    }
+    return this.avisosService.marcarComoLeido(id, usuarioId);
   }
 
   @Get(':id/leido')

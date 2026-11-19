@@ -1,7 +1,8 @@
-import { IsInt, IsNotEmpty } from 'class-validator';
+import { IsInt, IsOptional } from 'class-validator';
 
 export class ConfirmarLecturaDto {
   @IsInt()
-  @IsNotEmpty()
-  usuarioId: number;
+  @IsOptional()
+  usuarioId?: number;
 }
+
