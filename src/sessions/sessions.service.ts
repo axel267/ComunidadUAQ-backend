@@ -215,6 +215,7 @@ export class SessionsService {
           area: newUser.area,
           carrera: newUser.carrera,
         },
+        temporaryPassword: rawPassword,
       };
     } catch (error: any) {
       if (

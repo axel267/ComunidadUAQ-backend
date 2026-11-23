@@ -2,9 +2,11 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SessionsService } from '../sessions/sessions.service';
 import { CreateSessionDto } from '../sessions/dto/create-session.dto';
+import { ActivateAccountDto } from './dto/activate-account.dto';
 import { CambiarContrasenaDto } from './dto/cambiar-contrasena.dto';
 import { RecuperarContrasenaDto } from './dto/recuperar-contrasena.dto';
 import { Public } from './decorators/public.decorator';
+import { RoleId } from './constants/roles.enum';
 
 @Controller('auth')
 export class AuthController {
@@ -26,6 +28,27 @@ export class AuthController {
       body.pass,
       body.identificador,
       body.password,
+    );
+  }
+
+  /**
+   * POST /auth/activate
+   * Activa cuenta de alumno y envía contraseña temporal por correo institucional.
+   */
+  @Public()
+  @Post('activate')
+  activate(@Body() body: ActivateAccountDto) {
+    const expedienteNum = Number(body.expediente);
+    const facultadesIds = body.facultadId ? [Number(body.facultadId)] : [1];
+    const nombre = body.nombre?.trim() || `Estudiante ${expedienteNum}`;
+    return this.sessionsService.createAccount(
+      expedienteNum,
+      body.email.trim().toLowerCase(),
+      nombre,
+      facultadesIds,
+      RoleId.ESTUDIANTE,
+      body.carrera || 'Facultad de Informática',
+      body.carrera,
     );
   }
 
