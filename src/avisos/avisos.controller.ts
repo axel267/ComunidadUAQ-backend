@@ -15,7 +15,6 @@ import {
 import { AvisosService } from './avisos.service';
 import { CreateAvisoDto } from './dto/create-aviso.dto';
 import { UpdateAvisoDto } from './dto/update-aviso.dto';
-import { ConfirmarLecturaDto } from './dto/confirmar-lectura.dto';
 import { NivelUrgencia, EstadoModeracion } from './entities/aviso.entity';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -78,15 +77,14 @@ export class AvisosController {
    * Alimenta el modal bloqueante de Acuse de Recibo en la aplicacion.
    */
   @Get('urgentes/pendientes')
+  @UseGuards(JwtAuthGuard)
   obtenerUrgentesPendientes(
     @CurrentUser() user?: User,
-    @Query('usuarioId') queryUsuarioId?: string,
   ) {
-    const usuarioId = user?.id ?? (queryUsuarioId ? +queryUsuarioId : undefined);
-    if (!usuarioId) {
-      throw new BadRequestException('Se requiere usuarioId o sesion activa');
+    if (!user?.id) {
+      throw new BadRequestException('Se requiere una sesión activa');
     }
-    return this.avisosService.obtenerAvisosUrgentesPendientes(usuarioId);
+    return this.avisosService.obtenerAvisosUrgentesPendientes(user.id);
   }
 
   /**
@@ -149,19 +147,16 @@ export class AvisosController {
   // CONFIRMACIÓN Y ESTADO DE LECTURA DE AVISOS
   // ==========================================
 
-  @Public()
   @UseGuards(JwtAuthGuard)
   @Post(':id/leer')
   marcarComoLeido(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: ConfirmarLecturaDto,
     @CurrentUser() user?: User,
   ) {
-    const usuarioId = user?.id ?? dto.usuarioId;
-    if (!usuarioId) {
-      throw new BadRequestException('Se requiere usuarioId o sesion activa');
+    if (!user?.id) {
+      throw new BadRequestException('Se requiere una sesión activa');
     }
-    return this.avisosService.marcarComoLeido(id, usuarioId);
+    return this.avisosService.marcarComoLeido(id, user.id);
   }
 
   @Get(':id/leido')

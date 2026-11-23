@@ -63,5 +63,20 @@ describe('MailService (Notificaciones por Correo Institucional)', () => {
     expect(resultado.totalDestinatarios).toBe(0);
     expect(resultado.sent).toBe(true);
   });
+
+  it('no debe reportar como enviado el correo de contraseña temporal si SMTP no está configurado', async () => {
+    const noConfigurado = new MailService({
+      get: jest.fn((_key: string, defaultValue?: unknown) => defaultValue),
+    } as unknown as ConfigService);
+
+    const resultado = await noConfigurado.sendWelcomePassword(
+      'alumno@alumnos.uaq.mx',
+      'Estudiante',
+      'Temporal123!',
+    );
+
+    expect(resultado.sent).toBe(false);
+    expect(resultado.error).toContain('SMTP');
+  });
 });
 

@@ -1,4 +1,14 @@
-import { IsEmail, IsInt, IsString, IsOptional, Matches } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsEmail,
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 export class RegisterSessionDto {
   @IsInt()
@@ -26,4 +36,31 @@ export class RegisterSessionDto {
   @IsString()
   @IsOptional()
   carrera?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(30)
+  semestre?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  campus?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(160)
+  biografia?: string;
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(20)
+  telefono?: string;
+
+  @IsArray()
+  @IsOptional()
+  @ArrayMaxSize(8)
+  @ArrayUnique()
+  @IsString({ each: true })
+  intereses?: string[];
 }
