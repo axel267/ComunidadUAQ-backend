@@ -6,6 +6,7 @@ import { ForoComentario } from './entities/foro-comentario.entity';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto';
 import { UpdatePublicacionDto } from './dto/update-publicacion.dto';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
+import { VotarEncuestaDto } from './dto/votar-encuesta.dto';
 import { User } from '../sessions/user.entity';
 import { RoleId, RoleName } from '../auth/constants/roles.enum';
 
@@ -32,12 +33,23 @@ export class ForosService {
       }
     }
 
+    const encuestaNormalizada = createPublicacionDto.encuesta?.opciones?.length
+      ? {
+          pregunta: createPublicacionDto.encuesta.pregunta,
+          opciones: createPublicacionDto.encuesta.opciones,
+          duracion: createPublicacionDto.encuesta.duracion || '3d',
+          votosPorOpcion: createPublicacionDto.encuesta.opciones.map(() => 0),
+          votosUsuarios: {},
+        }
+      : null;
+
     const nuevaPublicacion = this.publicacionRepository.create({
       ...createPublicacionDto,
       categoria: createPublicacionDto.categoria || 'General',
       votos: 0,
       esFijado: createPublicacionDto.esFijado ?? false,
       estaCerrado: createPublicacionDto.estaCerrado ?? false,
+      encuesta: encuestaNormalizada,
     });
 
     return await this.publicacionRepository.save(nuevaPublicacion);
@@ -185,6 +197,46 @@ export class ForosService {
   async votarPublicacion(id: number, delta: number): Promise<ForoPublicacion> {
     const publicacion = await this.findOne(id);
     publicacion.votos += delta;
+    return await this.publicacionRepository.save(publicacion);
+  }
+
+  async votarEncuesta(id: number, dto: VotarEncuestaDto): Promise<ForoPublicacion> {
+    const publicacion = await this.findOne(id);
+    const base = publicacion.encuesta ?? dto.encuestaFallback;
+    if (!base || !Array.isArray(base.opciones) || base.opciones.length === 0) {
+      throw new BadRequestException('Esta publicacion no contiene una encuesta valida.');
+    }
+    if (dto.opcionIndex < 0 || dto.opcionIndex >= base.opciones.length) {
+      throw new BadRequestException('Opcion de encuesta fuera de rango.');
+    }
+
+    const votosUsuarios: Record<string, number> = { ...(base.votosUsuarios ?? {}) };
+    const votosPorOpcion = base.opciones.map((_, idx) => base.votosPorOpcion?.[idx] ?? 0);
+
+    if (dto.usuarioId !== undefined && dto.usuarioId !== null) {
+      const key = String(dto.usuarioId);
+      const prevIdx = votosUsuarios[key];
+      if (prevIdx !== undefined && prevIdx >= 0 && prevIdx < votosPorOpcion.length) {
+        votosPorOpcion[prevIdx] = Math.max(0, votosPorOpcion[prevIdx] - 1);
+      }
+      if (prevIdx === dto.opcionIndex) {
+        delete votosUsuarios[key];
+      } else {
+        votosUsuarios[key] = dto.opcionIndex;
+        votosPorOpcion[dto.opcionIndex] = (votosPorOpcion[dto.opcionIndex] ?? 0) + 1;
+      }
+    } else {
+      votosPorOpcion[dto.opcionIndex] = (votosPorOpcion[dto.opcionIndex] ?? 0) + 1;
+    }
+
+    publicacion.encuesta = {
+      pregunta: base.pregunta,
+      opciones: base.opciones,
+      duracion: base.duracion,
+      votosPorOpcion,
+      votosUsuarios,
+    };
+
     return await this.publicacionRepository.save(publicacion);
   }
 

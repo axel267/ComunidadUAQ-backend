@@ -11,6 +11,14 @@ import {
 import { User } from '../../sessions/user.entity';
 import { ForoComentario } from './foro-comentario.entity';
 
+export interface EncuestaForoData {
+  pregunta: string;
+  opciones: string[];
+  duracion: string;
+  votosPorOpcion?: number[];
+  votosUsuarios?: Record<string, number>;
+}
+
 @Entity('foro_publicaciones')
 export class ForoPublicacion {
   @PrimaryGeneratedColumn()
@@ -43,6 +51,9 @@ export class ForoPublicacion {
 
   @Column({ name: 'esta_cerrado', type: 'boolean', default: false })
   estaCerrado: boolean;
+
+  @Column({ type: 'jsonb', nullable: true })
+  encuesta: EncuestaForoData | null;
 
   @CreateDateColumn({ name: 'fecha_creacion' })
   fechaCreacion: Date;

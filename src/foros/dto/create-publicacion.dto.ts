@@ -1,4 +1,5 @@
-import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsInt, IsBoolean, IsObject } from 'class-validator';
+import type { EncuestaForoData } from '../entities/foro-publicacion.entity';
 
 export class CreatePublicacionDto {
   @IsString()
@@ -28,4 +29,8 @@ export class CreatePublicacionDto {
   @IsBoolean()
   @IsOptional()
   estaCerrado?: boolean;
+
+  @IsObject()
+  @IsOptional()
+  encuesta?: EncuestaForoData;
 }

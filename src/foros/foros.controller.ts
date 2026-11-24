@@ -15,6 +15,7 @@ import { ForosService } from './foros.service';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto';
 import { UpdatePublicacionDto } from './dto/update-publicacion.dto';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
+import { VotarEncuestaDto } from './dto/votar-encuesta.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -87,6 +88,15 @@ export class ForosController {
   ) {
     const cambio = delta !== undefined ? delta : 1;
     return this.forosService.votarPublicacion(id, cambio);
+  }
+
+  @Public()
+  @Patch(':id/encuesta/votar')
+  votarEncuesta(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: VotarEncuestaDto,
+  ) {
+    return this.forosService.votarEncuesta(id, dto);
   }
 
   @Patch(':id/fijar')
