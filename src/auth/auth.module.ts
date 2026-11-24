@@ -20,7 +20,7 @@ import { RolesGuard } from './guards/roles.guard';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET', 'super-secreto-universidad-uaq-2026'),
-        signOptions: { expiresIn: '24h' },
+        signOptions: { expiresIn: '365d' },
       }),
     }),
   ],
