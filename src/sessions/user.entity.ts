@@ -55,21 +55,6 @@ export class User {
     @Column({ name: 'intereses', type: 'jsonb', nullable: true })
     intereses: string[] | null;
 
-    @Column({ name: 'semestre', type: 'varchar', length: 30, nullable: true })
-    semestre: string;
-
-    @Column({ name: 'campus', type: 'varchar', length: 100, nullable: true })
-    campus: string;
-
-    @Column({ name: 'biografia', type: 'text', nullable: true })
-    biografia: string;
-
-    @Column({ name: 'telefono', type: 'varchar', length: 20, nullable: true })
-    telefono: string;
-
-    @Column({ name: 'intereses', type: 'jsonb', nullable: true })
-    intereses: string[];
-
     @Column({ name: 'estado_activo', default: true })
     estadoActivo: boolean;
 

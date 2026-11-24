@@ -1,8 +1,9 @@
-import { Controller, Post, Body, Get, Query, Patch } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, Patch, Param } from '@nestjs/common';
 import { SessionsService } from './sessions.service';
 import { CreateSessionDto } from './dto/create-session.dto';
 import { RegisterSessionDto } from './dto/register-session.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Controller('sessions')
 export class SessionsController {
@@ -54,5 +55,17 @@ export class SessionsController {
       body.currentPassword,
       body.newPassword,
     );
+  }
+
+  /** PATCH /sessions/profile — Actualizar datos del perfil */
+  @Patch('profile')
+  updateProfile(@Body() body: UpdateProfileDto) {
+    return this.sessionsService.updateProfile(body);
+  }
+
+  /** GET /sessions/user/:id — Obtener datos actualizados del usuario */
+  @Get('user/:id')
+  getUser(@Param('id') id: string) {
+    return this.sessionsService.getUserById(Number(id));
   }
 }

@@ -385,7 +385,7 @@ export class SessionsService {
   async updateProfile(dto: UpdateProfileDto) {
     const user = await this.usersRepository.findOne({
       where: { id: dto.userId },
-      relations: ['rol', 'facultades'],
+      relations: { rol: true, facultades: true },
     });
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
@@ -419,6 +419,34 @@ export class SessionsService {
         intereses: user.intereses,
         facultades: user.facultades,
       },
+    };
+  }
+
+  // ─── Obtener usuario por ID ─────────────────────────────────────────────────
+
+  async getUserById(id: number) {
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: { rol: true, facultades: true },
+    });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    return {
+      id: user.id,
+      email: user.email,
+      nombre: user.nombre,
+      expediente: user.expediente,
+      rolId: user.rolId,
+      rol: user.rol ? user.rol.nombre : null,
+      area: user.area,
+      carrera: user.carrera,
+      semestre: user.semestre,
+      campus: user.campus,
+      biografia: user.biografia,
+      telefono: user.telefono,
+      intereses: user.intereses,
+      facultades: user.facultades,
     };
   }
 }

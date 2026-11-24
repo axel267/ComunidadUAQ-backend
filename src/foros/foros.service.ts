@@ -66,10 +66,21 @@ export class ForosService {
 
     return await this.publicacionRepository.find({
       where,
-      relations: { autor: true },
+      relations: {
+        autor: true,
+        comentarios: {
+          autor: true,
+          respuestas: {
+            autor: true,
+          },
+        },
+      },
       order: {
         esFijado: 'DESC',
         fechaCreacion: 'DESC',
+        comentarios: {
+          fechaCreacion: 'ASC',
+        },
       },
     });
   }
@@ -222,7 +233,17 @@ export class ForosService {
       votos: 0,
     });
 
-    return await this.comentarioRepository.save(nuevoComentario);
+    const guardado = await this.comentarioRepository.save(nuevoComentario);
+    const encontrado = await this.comentarioRepository.findOne({
+      where: { id: guardado.id },
+      relations: {
+        autor: true,
+        respuestas: {
+          autor: true,
+        },
+      },
+    });
+    return encontrado ?? guardado;
   }
 
   async findComentariosByPublicacion(publicacionId: number): Promise<ForoComentario[]> {

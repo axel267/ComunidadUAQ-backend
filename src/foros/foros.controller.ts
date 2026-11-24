@@ -121,6 +121,7 @@ export class ForosController {
   // ENDPOINTS DE COMENTARIOS (foro_comentarios)
   // ==========================================
 
+  @Public()
   @Post('comentarios')
   @UseGuards(JwtAuthGuard)
   createComentario(
@@ -148,6 +149,7 @@ export class ForosController {
     return this.forosService.votarComentario(id, cambio);
   }
 
+  @Public()
   @Delete('comentarios/:id')
   @UseGuards(JwtAuthGuard)
   removeComentario(@Param('id', ParseIntPipe) id: number) {
