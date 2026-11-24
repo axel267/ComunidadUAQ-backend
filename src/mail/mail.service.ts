@@ -8,29 +8,61 @@ export class MailService {
   private transporter: nodemailer.Transporter;
   private mailUser: string;
   private smtpConfigurado: boolean;
+  private smtpHost: string;
+  private smtpPort: number;
+  private smtpSecure: boolean;
 
   constructor(private readonly configService: ConfigService) {
-    const host = this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com');
-    const port = this.configService.get<number>('SMTP_PORT', 587);
-    const user = this.configService.get<string>('SMTP_USER');
-    const pass = this.configService.get<string>('SMTP_PASSWORD');
-    this.mailUser = this.configService.get<string>('MAIL_USER', user || 'notificaciones@uaq.mx');
+    const host = (this.configService.get<string>('SMTP_HOST', 'smtp.gmail.com') || 'smtp.gmail.com').trim();
+    const rawPort = this.configService.get<string | number>('SMTP_PORT', 587);
+    const port = Number(rawPort) || 587;
+    const rawSecure = this.configService.get<string>('SMTP_SECURE');
+    const secure =
+      rawSecure !== undefined && rawSecure !== ''
+        ? String(rawSecure).toLowerCase() === 'true'
+        : port === 465;
 
-    // Verificar si las credenciales son reales o son placeholders de desarrollo
+    const user = (this.configService.get<string>('SMTP_USER') || '').trim();
+    const pass = (
+      this.configService.get<string>('SMTP_PASSWORD') ||
+      this.configService.get<string>('SMTP_PASS') ||
+      this.configService.get<string>('MAIL_PASSWORD') ||
+      this.configService.get<string>('MAIL_PASS') ||
+      ''
+    ).trim();
+
+    this.smtpHost = host;
+    this.smtpPort = port;
+    this.smtpSecure = secure;
+    this.mailUser = (
+      this.configService.get<string>('MAIL_USER') ||
+      user ||
+      'notificaciones@uaq.mx'
+    ).trim();
+
     this.smtpConfigurado = !!(user && pass && user !== 'tu_correo@gmail.com');
 
     if (this.smtpConfigurado) {
       this.transporter = nodemailer.createTransport({
         host,
         port,
-        secure: false,
+        secure,
         auth: { user, pass },
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 15_000,
         tls: { rejectUnauthorized: false },
       });
-      this.logger.log(`Servicio SMTP configurado para: ${this.mailUser}`);
+      this.logger.log(
+        `[SMTP] Configurado: host=${host} port=${port} secure=${secure} user=${user} from=${this.mailUser}`,
+      );
     } else {
+      const faltantes = [
+        !user || user === 'tu_correo@gmail.com' ? 'SMTP_USER' : null,
+        !pass ? 'SMTP_PASSWORD' : null,
+      ].filter(Boolean);
       this.logger.warn(
-        'Credenciales SMTP en .env contienen valores por defecto. Los correos se simularan en consola para desarrollo.',
+        `[SMTP] No configurado (faltan o son placeholder: ${faltantes.join(', ')}). El registro de cuentas fallara al enviar la contrasena temporal.`,
       );
     }
   }
@@ -223,21 +255,39 @@ export class MailService {
     }
 
     try {
-      // Usar bcc (copia oculta) para proteger la privacidad de los correos de los alumnos
-      const mailOptions = {
-        from: `"Comunidad UAQ" <${this.mailUser}>`,
-        to: this.mailUser,
-        bcc: destinatarios,
-        subject,
-        html,
-      };
+      const esIndividual = destinatarios.length === 1;
+      const mailOptions: nodemailer.SendMailOptions = esIndividual
+        ? {
+            from: `"Comunidad UAQ" <${this.mailUser}>`,
+            to: destinatarios[0],
+            subject,
+            html,
+          }
+        : {
+            from: `"Comunidad UAQ" <${this.mailUser}>`,
+            to: this.mailUser,
+            bcc: destinatarios,
+            subject,
+            html,
+          };
 
       await this.transporter.sendMail(mailOptions);
       this.logger.log(`Correo enviado exitosamente a ${destinatarios.length} destinatarios.`);
       return { sent: true, totalDestinatarios: destinatarios.length };
     } catch (error: any) {
-      this.logger.error(`Error al despachar correo SMTP: ${error.message}`);
-      return { sent: false, totalDestinatarios: destinatarios.length, error: error.message };
+      const detalles = [
+        `host=${this.smtpHost}:${this.smtpPort}`,
+        `secure=${this.smtpSecure}`,
+        error?.code ? `code=${error.code}` : null,
+        error?.responseCode ? `responseCode=${error.responseCode}` : null,
+        error?.command ? `command=${error.command}` : null,
+        error?.response ? `response=${error.response}` : null,
+        `message=${error?.message || 'Error desconocido'}`,
+      ]
+        .filter(Boolean)
+        .join(' | ');
+      this.logger.error(`[SMTP] Error al despachar correo: ${detalles}`);
+      return { sent: false, totalDestinatarios: destinatarios.length, error: detalles };
     }
   }
 }

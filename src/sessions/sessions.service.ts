@@ -3,6 +3,7 @@ import {
   HttpException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
@@ -19,6 +20,8 @@ import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class SessionsService {
+  private readonly logger = new Logger(SessionsService.name);
+
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
@@ -231,6 +234,9 @@ export class SessionsService {
         rawPassword,
       );
       if (!resultadoCorreo.sent) {
+        this.logger.error(
+          `[Registro] Fallo al enviar contrasena temporal a ${email}: ${resultadoCorreo.error || 'sin detalle'}`,
+        );
         const rollback = await this.usersRepository.delete(savedUser.id);
         if (!rollback.affected) {
           throw new InternalServerErrorException(
