@@ -11,7 +11,13 @@ import {
   UseGuards,
   ParseIntPipe,
   BadRequestException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { CreateComunicadoOficialDto } from './dto/create-comunicado-oficial.dto';
+import { UpdateComunicadoOficialDto } from './dto/update-comunicado-oficial.dto';
+import { ArchivoSubido } from './types/archivo-subido';
 import { AvisosService } from './avisos.service';
 import { CreateAvisoDto } from './dto/create-aviso.dto';
 import { UpdateAvisoDto } from './dto/update-aviso.dto';
@@ -62,8 +68,11 @@ export class AvisosController {
     @Query('autorId') autorId?: string,
     @Query('urgencia') urgencia?: NivelUrgencia,
     @Query('estadoPublicacion') estadoPublicacion?: EstadoModeracion,
+    @Query('esComunicadoOficial') esComunicadoOficial?: string,
   ) {
     return this.avisosService.findAll({
+      esComunicadoOficial:
+        esComunicadoOficial === undefined ? undefined : esComunicadoOficial === 'true',
       facultadId: facultadId ? +facultadId : undefined,
       autorId: autorId ? +autorId : undefined,
       urgencia,
@@ -85,6 +94,74 @@ export class AvisosController {
       throw new BadRequestException('Se requiere una sesión activa');
     }
     return this.avisosService.obtenerAvisosUrgentesPendientes(user.id);
+  }
+
+  /**
+   * GET /avisos/oficial/activo
+   * Comunicado Oficial activo más reciente para el banner principal (público). Devuelve null si no hay.
+   */
+  @Public()
+  @Get('oficial/activo')
+  obtenerComunicadoOficialActivo() {
+    return this.avisosService.obtenerComunicadoOficialActivo();
+  }
+
+  /**
+   * POST /avisos/oficial/adjunto
+   * Sube el PDF adjunto de un comunicado oficial (solo Coordinador).
+   */
+  @Post('oficial/adjunto')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.COORDINADOR)
+  @UseInterceptors(FileInterceptor('archivo', { limits: { fileSize: 10 * 1024 * 1024 } }))
+  subirAdjuntoComunicado(
+    @UploadedFile() archivo: ArchivoSubido | undefined,
+    @CurrentUser() user: User,
+  ) {
+    return this.avisosService.guardarAdjuntoComunicado(archivo, user);
+  }
+
+  /**
+   * POST /avisos/oficial
+   * Publica un comunicado oficial: solo Coordinador; el autor es el coordinador autenticado.
+   */
+  @Post('oficial')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.COORDINADOR)
+  crearComunicadoOficial(
+    @Body() dto: CreateComunicadoOficialDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.avisosService.crearComunicadoOficial(dto, user);
+  }
+
+  /**
+   * PATCH /avisos/oficial/:id
+   * Edita un comunicado oficial: solo el Coordinador que lo creó (403 en otro caso).
+   */
+  @Patch('oficial/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.COORDINADOR)
+  actualizarComunicadoOficial(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateComunicadoOficialDto,
+    @CurrentUser() user: User,
+  ) {
+    return this.avisosService.actualizarComunicadoOficial(id, dto, user);
+  }
+
+  /**
+   * DELETE /avisos/oficial/:id
+   * Desactiva un comunicado oficial: solo el Coordinador que lo creó (403 en otro caso).
+   */
+  @Delete('oficial/:id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(RoleName.COORDINADOR)
+  desactivarComunicadoOficial(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: User,
+  ) {
+    return this.avisosService.desactivarComunicadoOficial(id, user);
   }
 
   /**

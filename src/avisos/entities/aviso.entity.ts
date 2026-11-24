@@ -75,6 +75,27 @@ export class Aviso {
   @Column({ name: 'observaciones_ia', type: 'text', nullable: true })
   observacionesIa: string;
 
+  @Column({ name: 'es_comunicado_oficial', type: 'boolean', default: false })
+  esComunicadoOficial: boolean;
+
+  @Column({ name: 'activo', type: 'boolean', default: true })
+  activo: boolean;
+
+  @Column({ name: 'resumen', type: 'varchar', length: 500, nullable: true })
+  resumen: string | null;
+
+  @Column({ name: 'fecha_limite', type: 'date', nullable: true })
+  fechaLimite: string | null;
+
+  @Column({ name: 'adjunto_url', type: 'varchar', length: 255, nullable: true })
+  adjuntoUrl: string | null;
+
+  @Column({ name: 'adjunto_nombre', type: 'varchar', length: 255, nullable: true })
+  adjuntoNombre: string | null;
+
+  @Column({ name: 'adjunto_tamano', type: 'int', nullable: true })
+  adjuntoTamano: number | null;
+
   @OneToMany(() => LecturaAviso, (lectura) => lectura.aviso)
   lecturas: LecturaAviso[];
 }

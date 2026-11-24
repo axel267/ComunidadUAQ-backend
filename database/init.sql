@@ -47,7 +47,14 @@ CREATE TABLE Avisos (
     autor_id INT REFERENCES Usuarios(id),
     fecha_publicacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     estado_publicacion estado_moderacion DEFAULT 'PENDIENTE',
-    observaciones_ia TEXT
+    observaciones_ia TEXT,
+    es_comunicado_oficial BOOLEAN NOT NULL DEFAULT FALSE,
+    activo BOOLEAN NOT NULL DEFAULT TRUE,
+    resumen VARCHAR(500),
+    fecha_limite DATE,
+    adjunto_url VARCHAR(255),
+    adjunto_nombre VARCHAR(255),
+    adjunto_tamano INT
 );
 
 -- Lecturas Avisos

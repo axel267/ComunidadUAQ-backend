@@ -11,6 +11,12 @@ import { LecturaAviso } from './entities/lectura-aviso.entity';
 import { User } from '../sessions/user.entity';
 import { CreateAvisoDto } from './dto/create-aviso.dto';
 import { UpdateAvisoDto } from './dto/update-aviso.dto';
+import { CreateComunicadoOficialDto } from './dto/create-comunicado-oficial.dto';
+import { UpdateComunicadoOficialDto } from './dto/update-comunicado-oficial.dto';
+import { ArchivoSubido } from './types/archivo-subido';
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import { randomUUID } from 'crypto';
 import { RoleId, RoleName } from '../auth/constants/roles.enum';
 import { validarPermisoFacultadOArea } from '../auth/utils/area-permissions';
 import { MailService } from '../mail/mail.service';
@@ -126,8 +132,11 @@ export class AvisosService {
     autorId?: number;
     urgencia?: NivelUrgencia;
     estadoPublicacion?: EstadoModeracion;
+    esComunicadoOficial?: boolean;
   }): Promise<Aviso[]> {
-    const where: any = {};
+    const where: any = {
+      esComunicadoOficial: filters?.esComunicadoOficial ?? false,
+    };
 
     if (filters?.facultadId) {
       where.facultadId = filters.facultadId;
@@ -181,6 +190,10 @@ export class AvisosService {
       (await this.obtenerYValidarUsuario(usuarioId ?? updateAvisoDto.usuarioId));
     const aviso = await this.findOne(id);
 
+    if (aviso.esComunicadoOficial) {
+      this.asegurarGestionComunicado(aviso, user);
+    }
+
     // Validar permisos por rol y área/facultad sobre el aviso original o nueva facultad
     validarPermisoFacultadOArea(user, updateAvisoDto.facultadId || aviso.facultadId);
 
@@ -198,6 +211,10 @@ export class AvisosService {
       userAutenticado || (await this.obtenerYValidarUsuario(usuarioId));
     const aviso = await this.findOne(id);
 
+    if (aviso.esComunicadoOficial) {
+      this.asegurarGestionComunicado(aviso, user);
+    }
+
     // Validar permisos por rol y área/facultad
     validarPermisoFacultadOArea(user, aviso.facultadId);
 
@@ -208,6 +225,163 @@ export class AvisosService {
   // ==========================================
   // CONFIRMACIÓN Y ESTADO DE LECTURA DE AVISOS
   // ==========================================
+
+  // ==========================================
+  // COMUNICADO OFICIAL (banner principal del inicio)
+  // ==========================================
+
+  private esCoordinador(user?: User): boolean {
+    return (
+      !!user &&
+      (user.rolId === RoleId.COORDINADOR || user.rol?.nombre === RoleName.COORDINADOR)
+    );
+  }
+
+  private asegurarCoordinador(user?: User): void {
+    if (!this.esCoordinador(user)) {
+      throw new ForbiddenException(
+        'Solo el personal de Coordinación puede publicar comunicados oficiales.',
+      );
+    }
+  }
+
+  private asegurarGestionComunicado(aviso: Aviso, user?: User): void {
+    this.asegurarCoordinador(user);
+    if (aviso.autorId !== user?.id) {
+      throw new ForbiddenException(
+        'Solo el coordinador que publicó este comunicado oficial puede modificarlo o desactivarlo.',
+      );
+    }
+  }
+
+  private serializarComunicado(aviso: Aviso) {
+    return {
+      id: aviso.id,
+      titulo: aviso.titulo,
+      resumen: aviso.resumen,
+      contenido: aviso.contenido,
+      urgencia: aviso.urgencia,
+      fechaLimite: aviso.fechaLimite,
+      fechaPublicacion: aviso.fechaPublicacion,
+      activo: aviso.activo,
+      adjuntoUrl: aviso.adjuntoUrl,
+      adjuntoNombre: aviso.adjuntoNombre,
+      adjuntoTamano: aviso.adjuntoTamano,
+      autorId: aviso.autorId,
+      autor: aviso.autor
+        ? { id: aviso.autor.id, nombre: aviso.autor.nombre, area: aviso.autor.area ?? null }
+        : null,
+      facultad: aviso.facultad
+        ? {
+            id: aviso.facultad.id,
+            nombre: aviso.facultad.nombre,
+            abreviatura: aviso.facultad.abreviatura,
+          }
+        : null,
+    };
+  }
+
+  private async obtenerComunicadoOficial(id: number): Promise<Aviso> {
+    const aviso = await this.findOne(id);
+    if (!aviso.esComunicadoOficial) {
+      throw new NotFoundException(`Comunicado oficial con ID ${id} no encontrado`);
+    }
+    return aviso;
+  }
+
+  private async eliminarArchivoComunicado(adjuntoUrl?: string | null): Promise<void> {
+    if (!adjuntoUrl?.startsWith('/uploads/comunicados/')) return;
+    const ruta = join(process.cwd(), adjuntoUrl.replace(/^\//, ''));
+    await fs.unlink(ruta).catch(() => undefined);
+  }
+
+  async obtenerComunicadoOficialActivo() {
+    const aviso = await this.avisoRepository.findOne({
+      where: { esComunicadoOficial: true, activo: true },
+      relations: { autor: true, facultad: true },
+      order: { fechaPublicacion: 'DESC' },
+    });
+    return aviso ? this.serializarComunicado(aviso) : null;
+  }
+
+  async crearComunicadoOficial(dto: CreateComunicadoOficialDto, user: User) {
+    this.asegurarCoordinador(user);
+
+    const aviso = this.avisoRepository.create({
+      ...dto,
+      esComunicadoOficial: true,
+      activo: true,
+      autorId: user.id,
+      estadoPublicacion: EstadoModeracion.APROBADA,
+    });
+    const guardado = await this.avisoRepository.save(aviso);
+
+    if (
+      guardado.urgencia === NivelUrgencia.ALTA ||
+      guardado.urgencia === NivelUrgencia.URGENTE
+    ) {
+      this.enviarNotificacionCorreoComunidad(guardado, user).catch((err) =>
+        console.error('Error enviando correos de comunicado oficial:', err),
+      );
+    }
+
+    return this.serializarComunicado(await this.findOne(guardado.id));
+  }
+
+  async actualizarComunicadoOficial(
+    id: number,
+    dto: UpdateComunicadoOficialDto,
+    user: User,
+  ) {
+    const aviso = await this.obtenerComunicadoOficial(id);
+    this.asegurarGestionComunicado(aviso, user);
+
+    const cambios = Object.fromEntries(
+      Object.entries(dto).filter(([, valor]) => valor !== undefined),
+    );
+    const adjuntoAnterior = aviso.adjuntoUrl;
+    Object.assign(aviso, cambios);
+    await this.avisoRepository.save(aviso);
+
+    if (dto.adjuntoUrl !== undefined && dto.adjuntoUrl !== adjuntoAnterior) {
+      await this.eliminarArchivoComunicado(adjuntoAnterior);
+    }
+
+    return this.serializarComunicado(await this.findOne(id));
+  }
+
+  async desactivarComunicadoOficial(id: number, user: User): Promise<{ message: string }> {
+    const aviso = await this.obtenerComunicadoOficial(id);
+    this.asegurarGestionComunicado(aviso, user);
+
+    aviso.activo = false;
+    await this.avisoRepository.save(aviso);
+    return { message: `Comunicado oficial ${id} desactivado correctamente` };
+  }
+
+  async guardarAdjuntoComunicado(archivo: ArchivoSubido | undefined, user: User) {
+    this.asegurarCoordinador(user);
+
+    if (!archivo) {
+      throw new BadRequestException('Se requiere un archivo PDF en el campo "archivo".');
+    }
+    const esPdf =
+      archivo.mimetype === 'application/pdf' && /\.pdf$/i.test(archivo.originalname);
+    if (!esPdf) {
+      throw new BadRequestException('Solo se permiten archivos PDF.');
+    }
+
+    const directorio = join(process.cwd(), 'uploads', 'comunicados');
+    await fs.mkdir(directorio, { recursive: true });
+    const nombreArchivo = `${randomUUID()}.pdf`;
+    await fs.writeFile(join(directorio, nombreArchivo), archivo.buffer);
+
+    return {
+      adjuntoUrl: `/uploads/comunicados/${nombreArchivo}`,
+      adjuntoNombre: archivo.originalname.slice(0, 255),
+      adjuntoTamano: archivo.size,
+    };
+  }
 
   async marcarComoLeido(
     avisoId: number,
@@ -332,7 +506,8 @@ export class AvisosService {
       .leftJoinAndSelect('aviso.autor', 'autor')
       .where('aviso.urgencia IN (:...urgencias)', {
         urgencias: [NivelUrgencia.ALTA, NivelUrgencia.URGENTE],
-      });
+      })
+      .andWhere('aviso.activo = :activo', { activo: true });
 
     if (facultadIds.length > 0) {
       query.andWhere(
