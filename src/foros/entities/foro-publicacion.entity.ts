@@ -19,6 +19,12 @@ export interface EncuestaForoData {
   votosUsuarios?: Record<string, number>;
 }
 
+export interface EventoForoData {
+  titulo: string;
+  fechaHora: string;
+  lugar: string;
+}
+
 @Entity('foro_publicaciones')
 export class ForoPublicacion {
   @PrimaryGeneratedColumn()
@@ -54,6 +60,9 @@ export class ForoPublicacion {
 
   @Column({ type: 'jsonb', nullable: true })
   encuesta: EncuestaForoData | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  evento: EventoForoData | null;
 
   @CreateDateColumn({ name: 'fecha_creacion' })
   fechaCreacion: Date;

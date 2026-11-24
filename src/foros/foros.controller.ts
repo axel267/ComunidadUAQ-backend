@@ -16,6 +16,7 @@ import { CreatePublicacionDto } from './dto/create-publicacion.dto';
 import { UpdatePublicacionDto } from './dto/update-publicacion.dto';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
 import { VotarEncuestaDto } from './dto/votar-encuesta.dto';
+import { RegistrarAsistenciaDto } from './dto/registrar-asistencia.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -55,6 +56,24 @@ export class ForosController {
       esFijado: esFijado !== undefined ? esFijado === 'true' : undefined,
       estaCerrado: estaCerrado !== undefined ? estaCerrado === 'true' : undefined,
     });
+  }
+
+  @Public()
+  @Get('asistencias/lista')
+  listarAsistencias(@Query('evento') evento?: string) {
+    return this.forosService.listarAsistencias(evento);
+  }
+
+  @Public()
+  @Post('asistencias/registrar')
+  registrarAsistencia(@Body() dto: RegistrarAsistenciaDto) {
+    return this.forosService.registrarAsistencia(dto);
+  }
+
+  @Public()
+  @Delete('asistencias/:id')
+  eliminarAsistencia(@Param('id', ParseIntPipe) id: number) {
+    return this.forosService.eliminarAsistencia(id);
   }
 
   @Public()

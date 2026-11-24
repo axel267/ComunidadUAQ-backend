@@ -3,10 +3,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ForoPublicacion } from './entities/foro-publicacion.entity';
 import { ForoComentario } from './entities/foro-comentario.entity';
+import { AsistenciaRegistro } from './entities/asistencia-registro.entity';
 import { CreatePublicacionDto } from './dto/create-publicacion.dto';
 import { UpdatePublicacionDto } from './dto/update-publicacion.dto';
 import { CreateComentarioDto } from './dto/create-comentario.dto';
 import { VotarEncuestaDto } from './dto/votar-encuesta.dto';
+import { RegistrarAsistenciaDto } from './dto/registrar-asistencia.dto';
 import { User } from '../sessions/user.entity';
 import { RoleId, RoleName } from '../auth/constants/roles.enum';
 
@@ -17,6 +19,8 @@ export class ForosService {
     private readonly publicacionRepository: Repository<ForoPublicacion>,
     @InjectRepository(ForoComentario)
     private readonly comentarioRepository: Repository<ForoComentario>,
+    @InjectRepository(AsistenciaRegistro)
+    private readonly asistenciaRepository: Repository<AsistenciaRegistro>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
   ) {}
@@ -26,10 +30,29 @@ export class ForosService {
   // ==========================================
 
   async create(createPublicacionDto: CreatePublicacionDto): Promise<ForoPublicacion> {
+    let autorUser: User | null = null;
     if (createPublicacionDto.autorId) {
-      const user = await this.userRepository.findOneBy({ id: createPublicacionDto.autorId });
-      if (!user) {
+      autorUser = await this.userRepository.findOne({
+        where: { id: createPublicacionDto.autorId },
+        relations: { rol: true },
+      });
+      if (!autorUser) {
         throw new NotFoundException(`Usuario con ID ${createPublicacionDto.autorId} no encontrado`);
+      }
+    }
+
+    const tieneEvento = Boolean(createPublicacionDto.evento?.titulo?.trim());
+    if (tieneEvento) {
+      const puedeEvento =
+        autorUser?.rolId === RoleId.ADMIN ||
+        autorUser?.rolId === RoleId.DOCENTE ||
+        autorUser?.rolId === RoleId.COORDINADOR ||
+        autorUser?.rol?.nombre === RoleName.ADMIN ||
+        autorUser?.rol?.nombre === RoleName.DOCENTE ||
+        autorUser?.rol?.nombre === RoleName.COORDINADOR;
+
+      if (!puedeEvento) {
+        throw new ForbiddenException('Solo coordinadores y docentes pueden crear eventos.');
       }
     }
 
@@ -43,6 +66,14 @@ export class ForosService {
         }
       : null;
 
+    const eventoNormalizado = tieneEvento && createPublicacionDto.evento
+      ? {
+          titulo: createPublicacionDto.evento.titulo.trim(),
+          fechaHora: createPublicacionDto.evento.fechaHora,
+          lugar: createPublicacionDto.evento.lugar.trim(),
+        }
+      : null;
+
     const nuevaPublicacion = this.publicacionRepository.create({
       ...createPublicacionDto,
       categoria: createPublicacionDto.categoria || 'General',
@@ -50,6 +81,7 @@ export class ForosService {
       esFijado: createPublicacionDto.esFijado ?? false,
       estaCerrado: createPublicacionDto.estaCerrado ?? false,
       encuesta: encuestaNormalizada,
+      evento: eventoNormalizado,
     });
 
     return await this.publicacionRepository.save(nuevaPublicacion);
@@ -326,5 +358,98 @@ export class ForosService {
       throw new NotFoundException(`Comentario con ID ${id} no encontrado`);
     }
     await this.comentarioRepository.remove(comentario);
+  }
+
+  async listarAsistencias(eventoTitulo?: string): Promise<AsistenciaRegistro[]> {
+    const where = eventoTitulo?.trim() ? { eventoTitulo: eventoTitulo.trim() } : {};
+    return await this.asistenciaRepository.find({
+      where,
+      order: { fechaRegistro: 'DESC' },
+      take: 200,
+    });
+  }
+
+  async registrarAsistencia(dto: RegistrarAsistenciaDto): Promise<AsistenciaRegistro> {
+    let responsableNombre = 'Coordinacion UAQ';
+    if (dto.tomadoPorId) {
+      const responsable = await this.userRepository.findOne({
+        where: { id: dto.tomadoPorId },
+        relations: { rol: true },
+      });
+      const autorizado =
+        responsable?.rolId === RoleId.ADMIN ||
+        responsable?.rolId === RoleId.DOCENTE ||
+        responsable?.rolId === RoleId.COORDINADOR ||
+        responsable?.rol?.nombre === RoleName.ADMIN ||
+        responsable?.rol?.nombre === RoleName.DOCENTE ||
+        responsable?.rol?.nombre === RoleName.COORDINADOR;
+
+      if (!autorizado) {
+        throw new ForbiddenException('Solo coordinadores y docentes pueden registrar asistencia.');
+      }
+      responsableNombre = responsable?.nombre || responsableNombre;
+    }
+
+    const texto = dto.codigoQrOExpediente.trim();
+    const expMatch = texto.match(/EXP[:\-]?(\d+)/i) || texto.match(/^(\d{4,10})$/);
+    const idMatch = texto.match(/ID:(\d+)/i);
+    const nomMatch = texto.match(/NOM:([^|]+)/i);
+
+    let alumno: User | null = null;
+    if (expMatch) {
+      alumno = await this.userRepository.findOneBy({ expediente: Number(expMatch[1]) });
+    }
+    if (!alumno && idMatch) {
+      alumno = await this.userRepository.findOneBy({ id: Number(idMatch[1]) });
+    }
+    if (!alumno && texto.includes('@')) {
+      alumno = await this.userRepository.findOneBy({ email: texto.toLowerCase() });
+    }
+
+    if (!alumno && !expMatch) {
+      throw new NotFoundException('Codigo QR o expediente no reconocido en el padrón universitario.');
+    }
+
+    const expedienteFinal = alumno?.expediente
+      ? String(alumno.expediente)
+      : expMatch
+        ? expMatch[1]
+        : texto;
+    const nombreFinal = alumno?.nombre || (nomMatch ? nomMatch[1].trim() : `Alumno EXP-${expedienteFinal}`);
+    const carreraFinal = alumno?.carrera || 'Facultad de Informatica';
+    const eventoFinal = dto.eventoTitulo?.trim() || 'Pase de lista general';
+
+    const existente = await this.asistenciaRepository.findOne({
+      where: { expediente: expedienteFinal, eventoTitulo: eventoFinal },
+      order: { fechaRegistro: 'DESC' },
+    });
+    if (existente) {
+      const haceMinutos = (Date.now() - new Date(existente.fechaRegistro).getTime()) / 60000;
+      if (haceMinutos < 180) {
+        return existente;
+      }
+    }
+
+    const registro = this.asistenciaRepository.create({
+      estudianteId: alumno?.id ?? null,
+      expediente: expedienteFinal,
+      nombreEstudiante: nombreFinal,
+      carrera: carreraFinal,
+      eventoTitulo: eventoFinal,
+      tomadoPorId: dto.tomadoPorId ?? null,
+      tomadoPorNombre: responsableNombre,
+      puntosOtorgados: 100,
+    });
+
+    return await this.asistenciaRepository.save(registro);
+  }
+
+  async eliminarAsistencia(id: number): Promise<{ message: string }> {
+    const registro = await this.asistenciaRepository.findOneBy({ id });
+    if (!registro) {
+      throw new NotFoundException(`Registro de asistencia ${id} no encontrado`);
+    }
+    await this.asistenciaRepository.remove(registro);
+    return { message: 'Asistencia eliminada' };
   }
 }
