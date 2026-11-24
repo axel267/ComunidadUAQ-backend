@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { MailService } from '../mail/mail.service';
 import { RoleId } from '../auth/constants/roles.enum';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -136,6 +137,11 @@ export class SessionsService {
         rol: user.rol ? user.rol.nombre : null,
         area: user.area,
         carrera: user.carrera,
+        semestre: user.semestre,
+        campus: user.campus,
+        biografia: user.biografia,
+        telefono: user.telefono,
+        intereses: user.intereses,
         facultades: user.facultades,
       },
     };
@@ -328,5 +334,47 @@ export class SessionsService {
     } catch (error) {
       throw new BadRequestException('El enlace de recuperación es inválido o ha expirado.');
     }
+  }
+
+  // ─── Actualizar perfil ──────────────────────────────────────────────────────
+
+  async updateProfile(dto: UpdateProfileDto) {
+    const user = await this.usersRepository.findOne({
+      where: { id: dto.userId },
+      relations: ['rol', 'facultades'],
+    });
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    if (dto.nombre !== undefined) user.nombre = dto.nombre.trim();
+    if (dto.carrera !== undefined) user.carrera = dto.carrera.trim();
+    if (dto.semestre !== undefined) user.semestre = dto.semestre.trim();
+    if (dto.campus !== undefined) user.campus = dto.campus.trim();
+    if (dto.biografia !== undefined) user.biografia = dto.biografia.trim();
+    if (dto.telefono !== undefined) user.telefono = dto.telefono.trim();
+    if (dto.intereses !== undefined) user.intereses = dto.intereses;
+
+    await this.usersRepository.save(user);
+
+    return {
+      message: 'Perfil actualizado exitosamente',
+      user: {
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        expediente: user.expediente,
+        rolId: user.rolId,
+        rol: user.rol ? user.rol.nombre : null,
+        area: user.area,
+        carrera: user.carrera,
+        semestre: user.semestre,
+        campus: user.campus,
+        biografia: user.biografia,
+        telefono: user.telefono,
+        intereses: user.intereses,
+        facultades: user.facultades,
+      },
+    };
   }
 }
