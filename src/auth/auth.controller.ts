@@ -67,9 +67,9 @@ export class AuthController {
    * Por ahora se recibe en el body para poder probarlo fácilmente.
    */
   @Post('cambiar-contrasena')
-  cambiarContrasena(@Body() body: CambiarContrasenaDto & { userId: number }) {
+  cambiarContrasena(@Body() body: CambiarContrasenaDto) {
     return this.authService.cambiarContrasena(
-      body.userId,
+      Number(body.userId),
       body.contrasenaActual,
       body.nuevaContrasena,
       body.confirmarContrasena,

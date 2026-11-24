@@ -1,6 +1,12 @@
-import { IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, MinLength } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CambiarContrasenaDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  userId?: number;
+
   @IsNotEmpty({ message: 'La contraseña actual es obligatoria.' })
   @IsString()
   contrasenaActual: string;
