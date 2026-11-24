@@ -43,6 +43,11 @@ export class MailService {
     nombre: string,
     password: string,
   ): Promise<{ sent: boolean; error?: string }> {
+    if (!this.smtpConfigurado || !this.transporter) {
+      this.logger.error('No se puede enviar la contraseña temporal: SMTP no está configurado.');
+      return { sent: false, error: 'SMTP no está configurado.' };
+    }
+
     const subject = 'Bienvenido a Comunidad UAQ - Tu contrasena temporal';
     const html = `
       <!DOCTYPE html>

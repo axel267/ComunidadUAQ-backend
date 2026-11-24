@@ -339,6 +339,8 @@ export class AvisosService {
         '(aviso.facultadId IN (:...facultadIds) OR aviso.facultadId IS NULL)',
         { facultadIds },
       );
+    } else {
+      query.andWhere('aviso.facultadId IS NULL');
     }
 
     const avisosUrgentes = await query.getMany();

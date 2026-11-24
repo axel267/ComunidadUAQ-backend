@@ -27,6 +27,11 @@ CREATE TABLE Usuarios (
     rol_id INT REFERENCES Roles(id),
     area VARCHAR(150),
     carrera VARCHAR(150),
+    semestre VARCHAR(30),
+    campus VARCHAR(100),
+    biografia TEXT,
+    telefono VARCHAR(20),
+    intereses JSONB,
     estado_activo BOOLEAN DEFAULT TRUE,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

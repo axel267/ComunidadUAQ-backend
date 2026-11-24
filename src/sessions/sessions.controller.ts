@@ -36,6 +36,13 @@ export class SessionsController {
       body.rolId,
       body.area,
       body.carrera,
+      {
+        semestre: body.semestre,
+        campus: body.campus,
+        biografia: body.biografia,
+        telefono: body.telefono,
+        intereses: body.intereses,
+      },
     );
   }
 

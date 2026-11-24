@@ -39,7 +39,7 @@ export class AuthController {
   @Post('activate')
   activate(@Body() body: ActivateAccountDto) {
     const expedienteNum = Number(body.expediente);
-    const facultadesIds = body.facultadId ? [Number(body.facultadId)] : [1];
+    const facultadesIds = body.facultadId ? [Number(body.facultadId)] : [];
     const nombre = body.nombre?.trim() || `Estudiante ${expedienteNum}`;
     return this.sessionsService.createAccount(
       expedienteNum,
@@ -47,8 +47,15 @@ export class AuthController {
       nombre,
       facultadesIds,
       RoleId.ESTUDIANTE,
-      body.carrera || 'Facultad de Informática',
+      undefined,
       body.carrera,
+      {
+        semestre: body.semestre,
+        campus: body.campus,
+        biografia: body.biografia,
+        telefono: body.telefono,
+        intereses: body.intereses,
+      },
     );
   }
 

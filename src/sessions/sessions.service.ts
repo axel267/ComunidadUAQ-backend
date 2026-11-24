@@ -1,7 +1,16 @@
-import { Injectable, UnauthorizedException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  HttpException,
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+  ServiceUnavailableException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomInt } from 'node:crypto';
 import { User } from './user.entity';
 import { MailService } from '../mail/mail.service';
 import { RoleId } from '../auth/constants/roles.enum';
@@ -32,22 +41,20 @@ export class SessionsService {
     const allChars = uppercase + lowercase + numbers + special;
 
     // Garantizar al menos 1 carácter de cada grupo
+    const pick = (chars: string) => chars[randomInt(chars.length)];
     const mandatoryChars = [
-      uppercase[Math.floor(Math.random() * uppercase.length)],
-      lowercase[Math.floor(Math.random() * lowercase.length)],
-      numbers[Math.floor(Math.random() * numbers.length)],
-      special[Math.floor(Math.random() * special.length)],
+      pick(uppercase),
+      pick(lowercase),
+      pick(numbers),
+      pick(special),
     ];
 
-    // Rellenar los 4 caracteres restantes aleatoriamente
-    const extraChars = Array.from({ length: 4 }, () =>
-      allChars[Math.floor(Math.random() * allChars.length)],
-    );
+    const extraChars = Array.from({ length: 4 }, () => pick(allChars));
 
     // Mezclar todo para evitar patrones predecibles
     const combined = [...mandatoryChars, ...extraChars];
     for (let i = combined.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = randomInt(i + 1);
       [combined[i], combined[j]] = [combined[j], combined[i]];
     }
 
@@ -157,6 +164,13 @@ export class SessionsService {
     rolId: number,
     area?: string,
     carrera?: string,
+    perfil: {
+      semestre?: string;
+      campus?: string;
+      biografia?: string;
+      telefono?: string;
+      intereses?: string[];
+    } = {},
   ) {
     // 1. Validar dominio institucional obligatorio (@uaq.mx o @alumnos.uaq.mx)
     const emailRegex = /^[a-zA-Z0-9._%+-]+@(uaq\.mx|alumnos\.uaq\.mx)$/i;
@@ -199,43 +213,73 @@ export class SessionsService {
         nombre,
         facultades: facultadesIds.map((id) => ({ id })),
         rolId,
-        area,
-        carrera,
+        area: area?.trim() || null,
+        carrera: carrera?.trim() || null,
+        semestre: perfil.semestre?.trim() || null,
+        campus: perfil.campus?.trim() || null,
+        biografia: perfil.biografia?.trim() || null,
+        telefono: perfil.telefono?.trim() || null,
+        intereses: perfil.intereses?.filter((interes) => interes.trim()) || null,
         estadoActivo: true,
       });
 
-      await this.usersRepository.save(newUser);
+      const savedUser = await this.usersRepository.save(newUser);
 
-      // Enviar contraseña temporal por correo
-      await this.mailService.sendWelcomePassword(email, nombre, rawPassword);
+      const resultadoCorreo = await this.mailService.sendWelcomePassword(
+        email,
+        nombre,
+        rawPassword,
+      );
+      if (!resultadoCorreo.sent) {
+        const rollback = await this.usersRepository.delete(savedUser.id);
+        if (!rollback.affected) {
+          throw new InternalServerErrorException(
+            'No se pudo enviar el correo ni revertir la creación de la cuenta. Contacta a soporte.',
+          );
+        }
+        throw new ServiceUnavailableException(
+          'No se pudo enviar la contraseña temporal por correo. La cuenta no fue creada; inténtalo más tarde.',
+        );
+      }
 
       return {
         message:
           'Cuenta creada exitosamente. Se ha enviado una contraseña temporal al correo registrado.',
         user: {
-          id: newUser.id,
-          email: newUser.email,
-          nombre: newUser.nombre,
-          expediente: newUser.expediente,
-          rolId: newUser.rolId,
-          area: newUser.area,
-          carrera: newUser.carrera,
+          id: savedUser.id,
+          email: savedUser.email,
+          nombre: savedUser.nombre,
+          expediente: savedUser.expediente,
+          rolId: savedUser.rolId,
+          area: savedUser.area,
+          carrera: savedUser.carrera,
+          semestre: savedUser.semestre,
+          campus: savedUser.campus,
+          biografia: savedUser.biografia,
+          telefono: savedUser.telefono,
+          intereses: savedUser.intereses,
         },
-        temporaryPassword: rawPassword,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      const databaseErrorCode =
+        typeof error === 'object' && error !== null && 'code' in error
+          ? error.code
+          : undefined;
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       if (
-        error.code === '23503' ||
-        (error.message &&
-          error.message.includes('violates foreign key constraint'))
+        databaseErrorCode === '23503' ||
+        errorMessage.includes('violates foreign key constraint')
       ) {
         throw new BadRequestException(
           'Una o más de las facultades seleccionadas (o el rol) no existen en el sistema.',
         );
       }
 
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
       throw new BadRequestException(`Fallo al crear la cuenta: ${errorMessage}`);
     }
   }

@@ -1,4 +1,16 @@
-import { IsEmail, IsNotEmpty, IsOptional, Matches } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsArray,
+  IsEmail,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class ActivateAccountDto {
   @IsNotEmpty({ message: 'El expediente es obligatorio' })
@@ -14,8 +26,39 @@ export class ActivateAccountDto {
   nombre?: string;
 
   @IsOptional()
+  @IsString()
+  @MaxLength(150)
   carrera?: string;
 
   @IsOptional()
+  @IsInt()
+  @Min(1)
   facultadId?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  semestre?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  campus?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  biografia?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  telefono?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(8)
+  @ArrayUnique()
+  @IsString({ each: true })
+  intereses?: string[];
 }

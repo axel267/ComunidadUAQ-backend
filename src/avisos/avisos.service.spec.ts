@@ -88,6 +88,25 @@ describe('AvisosService - Acuse de Recibo y Urgentes Pendientes', () => {
     expect(pendientes[0].id).toBe(102);
   });
 
+  it('debe persistir el acuse y responder de forma idempotente al repetirlo', async () => {
+    const aviso = { id: 101, titulo: 'Aviso urgente' };
+    const usuario = { id: 10 };
+    const lectura = { avisoId: 101, usuarioId: 10 };
+    avisoRepo.findOne.mockResolvedValue(aviso);
+    userRepo.findOne.mockResolvedValue(usuario);
+    lecturaRepo.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(lectura);
+    lecturaRepo.save.mockResolvedValue(lectura);
+
+    const primera = await service.marcarComoLeido(101, 10);
+    const repetida = await service.marcarComoLeido(101, 10);
+
+    expect(primera.yaLeido).toBe(false);
+    expect(repetida.yaLeido).toBe(true);
+    expect(lecturaRepo.save).toHaveBeenCalledTimes(1);
+  });
+
   it('debe enviar notificacion por correo al crear un aviso urgente', async () => {
     const adminUser = {
       id: 1,

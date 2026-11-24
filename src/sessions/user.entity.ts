@@ -35,10 +35,25 @@ export class User {
     rol: Role;
 
     @Column({ name: 'area', type: 'varchar', length: 150, nullable: true })
-    area: string;
+    area: string | null;
 
     @Column({ name: 'carrera', type: 'varchar', length: 150, nullable: true })
-    carrera: string;
+    carrera: string | null;
+
+    @Column({ name: 'semestre', type: 'varchar', length: 30, nullable: true })
+    semestre: string | null;
+
+    @Column({ name: 'campus', type: 'varchar', length: 100, nullable: true })
+    campus: string | null;
+
+    @Column({ name: 'biografia', type: 'text', nullable: true })
+    biografia: string | null;
+
+    @Column({ name: 'telefono', type: 'varchar', length: 20, nullable: true })
+    telefono: string | null;
+
+    @Column({ name: 'intereses', type: 'jsonb', nullable: true })
+    intereses: string[] | null;
 
     @Column({ name: 'semestre', type: 'varchar', length: 30, nullable: true })
     semestre: string;
